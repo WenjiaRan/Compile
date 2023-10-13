@@ -1,0 +1,4 @@
+20351023a is not equal to 10
+Loop iteration: 0
+Loop iteration: 1
+num1 + num2: 50

@@ -1,0 +1,9 @@
+20351023Element 0 of array: 0
+Element 1 of array: 1
+Element 2 of array: 2
+Element 3 of array: 3
+Matrix element [0][0]: 0
+Matrix element [0][1]: 1
+Matrix element [1][0]: 1
+Matrix element [1][1]: 2
+This is the local variable: 5

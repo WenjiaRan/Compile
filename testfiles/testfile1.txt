@@ -1,0 +1,35 @@
+int main() {
+    printf("20351023");   // 学号输出
+    int a = 1, b = 2;
+    int c;
+    c = getint();
+    printf("\n");
+    printf("%d",c);
+    int result = (a && b) || (!a);
+    printf("Logic AND Result: %d\n", a && b); // 逻辑与
+    printf("Logic OR Result: %d\n", result);  // 逻辑或
+    if (1!=1 && 1==1){
+        printf("&& test fail!");
+    }
+    else {
+        printf("&& test success!");
+    }
+    if (1!=1 || 1==1){
+        printf("|| test success!");
+    }
+    if (1==1 && 1!=1){
+            printf("&& test fail!");
+        }
+    else {
+        printf("&& test success!");
+    }
+    if (1==1 || 1!=1){
+        printf("|| test success!");
+    }
+    printf("");
+    printf("\n");
+    printf("ksksksksksksksksksksks123123");
+
+
+    return 0;
+}

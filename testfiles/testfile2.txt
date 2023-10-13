@@ -1,0 +1,27 @@
+const int x = 5;
+const int __ = 1;
+const int __xyY = 22;
+const int _x_12 =33;
+const int x12 = 5;
+const int x_ =22;
+int y = 10;
+int add(int a, int b) {
+    return a + b;
+}
+
+int main() {
+    printf("20351023");    // 学号输出
+    printf("Constant x: %d\n", x);            // 常量定义
+    printf("Variable y: %d\n", y);            // 变量定义
+    int arr[2] = {1, 2};
+    printf("Array Value: %d\n", arr[1]);      // 数组定义
+    printf("Function Call: %d\n", add(x,y));  // 函数调用
+    int matrix[2][2] = {{1,2},{3,4}};
+    printf("Matrix Value: %d\n", matrix[1][1]);// 二维数组
+    y = y + 1;                                // 左值表达式
+    printf("Updated y: %d\n", y);
+    printf("Using getint: %d\n", getint());
+    printf("Multiplication Result: %d\n", x * y); // 乘法
+    printf("Multiplication Result");
+    return 0;
+}

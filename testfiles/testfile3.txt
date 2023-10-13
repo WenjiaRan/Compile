@@ -1,0 +1,29 @@
+int sub(int a, int b) {
+    return a - b;
+}
+
+int main() {
+    printf("20351023");   // 学号输出
+    const int p = 3, q = 6;
+    int z = 15;
+    int x; // 未初始化变量
+    x=10;
+    printf("Constant p: %d\n", p);            // 常量定义
+    printf("Variable z: %d\n", z);            // 变量定义
+    printf("Function Call: %d\n", sub(p,q));  // 函数调用
+    int simpleArray[2] = {7, 8};
+    printf("Array Value: %d\n", simpleArray[0]);// 数组定义
+    int unassginArray[2] ; //未初始化一维数组
+    unassginArray[0] =1;unassginArray[1] =1;
+    z = z - 1;                                // 左值表达式
+    printf("Updated z: %d\n", z);
+    int twoDArray[2][3] = {{9,10,11},{12,13,14}};
+    printf("Matrix Value: %d\n", twoDArray[0][2]); // 二维数组
+    // 未赋值二维数组
+    int unassigined2DArray[2][2];
+    unassigined2DArray[0][0] =1;unassigined2DArray[0][1] =1;unassigined2DArray[1][1]=1;unassigined2DArray[1][0]=2;
+    printf("Division Result: %d\n", z / p);   // 除法
+    printf("Remainder Result: %d\n", z % q);  // 模运算
+    printf("Multiplication Result");
+    return 0;
+}

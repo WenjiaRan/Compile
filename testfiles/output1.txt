@@ -1,0 +1,5 @@
+20351023
+2Logic AND Result: 1
+Logic OR Result: 1
+&& test success!|| test success!&& test success!|| test success!
+ksksksksksksksksksksks123123

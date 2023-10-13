@@ -1,0 +1,9 @@
+20351023Constant p: 3
+Variable z: 15
+Function Call: -3
+Array Value: 7
+Updated z: 14
+Matrix Value: 11
+Division Result: 4
+Remainder Result: 2
+Multiplication Result

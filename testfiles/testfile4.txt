@@ -1,0 +1,34 @@
+int global_var; // 全局变量声明
+
+void foo() {
+    int local_var = 5; // 局部变量定义及初值
+    printf("This is the local variable: %d\n", local_var);
+}
+
+int main() {
+    printf("20351023");
+    int arr[5]; // 一维数组声明
+    int matrix[3][3]; // 二维数组声明
+    int i, j;
+
+    for (i = 0; ; i=i+1) {
+        arr[i] = i;
+        printf("Element %d of array: %d\n", i, arr[i]);
+
+        if (i==3) {
+         break;
+        }
+        continue;
+    }
+
+    for(i = 0; i < 2; i=i+1) {
+        for(j = 0; j < 2; j=j+1) {
+            matrix[i][j] = i + j;
+            printf("Matrix element [%d][%d]: %d\n", i, j, matrix[i][j]);
+        }
+    }
+
+    foo();
+
+    return 0;
+}

@@ -1,0 +1,9 @@
+20351023Constant x: 5
+Variable y: 10
+Array Value: 2
+Function Call: 15
+Matrix Value: 4
+Updated y: 11
+Using getint: 1
+Multiplication Result: 55
+Multiplication Result

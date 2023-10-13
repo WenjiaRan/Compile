@@ -1,0 +1,50 @@
+int a=10;
+int x=0;
+int aa[2][2] = {{1,2},{2,3}};
+int arr[3] = {1, 2, 3};
+
+int uu=0;
+int xx=1;
+
+// 常量定义
+const int b = 10;
+const int arr_const[3] = {1, 2, 3};
+const int matrix_const[2][9/3] = {{1, 2, 3}, {4, 5, 6}};
+int max_in_arr(int arr[], int len);
+
+int main() {
+    printf("20351023");
+    max_in_arr(arr, 3);
+    int num1 = 20, num2 = 30; // 多个局部变量定义及初值
+    if (a != 10) {
+        printf("a is equal to 10\n");
+    } else {
+        printf("a is not equal to 10\n");
+    }
+
+    for(int i = 0; i < 2; i=i+1) {
+        printf("Loop iteration: %d\n", i);
+    }
+    printf("num1 + num2: %d\n", num1 + num2);
+    int i=1;
+    int a = +-+i;
+
+    return 0;
+}
+
+int max_in_arr(int arr[], int len) {
+    int max_val = arr[0];
+    for (int i = 1; i < len; i=i+1) {
+        if (arr[i] > max_val) {
+            max_val = arr[i];
+
+        }
+        if ( i == len-1) {
+                     break;
+                    }
+        else {
+            continue;
+        }
+    }
+    return max_val;
+}
