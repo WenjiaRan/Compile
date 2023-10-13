@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
 
+import static node.NodeType.BType;
 
 
 public class Parser {
@@ -82,7 +83,7 @@ public class Parser {
             FuncDefNode funcDefNode = funcDef();
             funcDefNodes.add(funcDefNode);
         }
-        MainFuncDefNode = MainFuncDef();
+        mainFuncDefNode = MainFuncDef();
         return new CompUnitNode(declNodes, funcDefNodes, mainFuncDefNode);
     }
 
@@ -115,7 +116,7 @@ public class Parser {
             constDefList.add(ConstDef());
         }
         semicnToken = match(TokenType.SEMICN);
-        return new ConstDeclNode(constToken,bTypeNode,constDefList,commaList,semicnToken)
+        return new ConstDeclNode(constToken,bTypeNode,constDefList,commaList,semicnToken);
     }
 
     private BTypeNode BType(){
@@ -180,15 +181,15 @@ public class Parser {
         return new VarDeclNode(bTypeNode,varDefNodeList,commaTokens,semicn);
     }
 
-    private VarDefNode VarDef() {
-        Token identToken;
-        List<Token> leftBrack=new ArrayList<Token>();
-        List<ConstExpNode> constExpNodeList=new ArrayList<ConstExpNode>();
-        List<Token> rightBrack=new ArrayList<Token>();
-
-        Token assignToken;
-        InitValNode initValNode;
-    }
+//    private VarDefNode VarDef() {
+//        Token identToken;
+//        List<Token> leftBrack=new ArrayList<Token>();
+//        List<ConstExpNode> constExpNodeList=new ArrayList<ConstExpNode>();
+//        List<Token> rightBrack=new ArrayList<Token>();
+//
+//        Token assignToken;
+//        InitValNode initValNode;
+//    }
 }
 
 

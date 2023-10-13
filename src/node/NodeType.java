@@ -3,6 +3,7 @@ package node;
 public enum NodeType {
     CompUnit,
     Decl,
+
     ConstDecl,
     BType,
     ConstDef,

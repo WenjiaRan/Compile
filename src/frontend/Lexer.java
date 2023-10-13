@@ -46,132 +46,232 @@ public class Lexer {
         keywords.put("void", TokenType.VOIDTK);
     }
     public void analyze(String source) {
-        line = 1; // 当前所在行数
-        int contentLength = source.length(); // 源代码长度
-        for (int i = 0; i < contentLength; i++) {
-            p = source.charAt(i);
-            char next = i + 1 < contentLength ? source.charAt(i + 1) : '\0';
-            if (p == '\n') line++;
-            else if (p == '_' || Character.isLetter(p)) {//保留字or标识符
-                String s = "";
-                for (int j = i; j < contentLength; j++) {
-                    char d = source.charAt(j);
-                    if (d == '_' || Character.isLetter(d) || Character.isDigit(d)) s += d;
-                    else {
-                        i = j - 1;
-                        break;
-                    }
+        line = 1;
+        int i = 0;
+        int contentLength = source.length();
+
+        while (i < contentLength) {
+            char currentChar = source.charAt(i);
+            char nextChar = '\0';
+            if (i + 1 < contentLength) {
+                nextChar = source.charAt(i + 1);
+            }
+
+            switch (currentChar) {
+                case '\n':
+                    line++;
+                    break;
+                case '_':
+                case 'a': case 'b': case 'c': case 'd': case 'e':
+                case 'f': case 'g': case 'h': case 'i': case 'j':
+                case 'k': case 'l': case 'm': case 'n': case 'o':
+                case 'p': case 'q': case 'r': case 's': case 't':
+                case 'u': case 'v': case 'w': case 'x': case 'y':
+                case 'z':
+                case 'A': case 'B': case 'C': case 'D': case 'E':
+                case 'F': case 'G': case 'H': case 'I': case 'J':
+                case 'K': case 'L': case 'M': case 'N': case 'O':
+                case 'P': case 'Q': case 'R': case 'S': case 'T':
+                case 'U': case 'V': case 'W': case 'X': case 'Y':
+                case 'Z':
+                    i = handleIdentifierOrKeyword(source, i);
+                    break;
+                case '0': case '1': case '2': case '3': case '4':
+                case '5': case '6': case '7': case '8': case '9':
+                    i = handleNumber(source, i);
+                    break;
+                case '\"':
+                    i = handleString(source, i);
+                    break;
+                case '/':
+                    i = handleCommentOrDivide(source, i, nextChar);
+                    break;
+                default:
+                    i = handleSymbolsAndOperators(source, i, nextChar);
+                    break;
+            }
+
+            i++;
+        }
+    }
+
+    private int handleIdentifierOrKeyword(String source, int startIndex) {
+        int i = startIndex;
+        StringBuilder identifier = new StringBuilder();
+
+        while (i < source.length() && (Character.isLetterOrDigit(source.charAt(i)) || source.charAt(i) == '_')) {
+            identifier.append(source.charAt(i));
+            i++;
+        }
+
+        tokens.add(new Token(keywords.getOrDefault(identifier.toString(), TokenType.IDENFR), line, identifier.toString()));
+
+        return i - 1;
+    }
+
+    private int handleNumber(String source, int startIndex) {
+        int i = startIndex;
+        StringBuilder number = new StringBuilder();
+
+        while (i < source.length() && Character.isDigit(source.charAt(i))) {
+            number.append(source.charAt(i));
+            i++;
+        }
+
+        tokens.add(new Token(TokenType.INTCON, line, number.toString()));
+
+        return i - 1;
+    }
+
+    private int handleString(String source, int startIndex) {
+        int i = startIndex + 1; // Start right after the opening "
+        StringBuilder s = new StringBuilder("\"");
+
+        while (i < source.length()) {
+            char currentChar = source.charAt(i);
+
+            if (currentChar == '\"') { // String ending quote
+                s.append(currentChar);
+                break;
+            }
+
+            if (currentChar == '\n' || currentChar == 37) {
+                // Handle invalid characters and format chars as in the original code
+                // TODO: Implement any error handling or logging you may need
+            }
+
+            // Handle escape sequences (assuming only "\n" is valid as in the original)
+            if (currentChar == 92 && (i + 1 == source.length() || source.charAt(i + 1) != 'n')) {
+                // TODO: Handle the error as in the original code
+            }
+
+            s.append(currentChar);
+            i++;
+        }
+
+        tokens.add(new Token(TokenType.STRCON, line, s.toString()));
+        return i;
+    }
+
+    private int handleCommentOrDivide(String source, int startIndex, char nextChar) {
+        int i = startIndex;
+
+        if (nextChar == '/') {
+            i = source.indexOf('\n', i + 2);
+            if (i == -1) {
+                i = source.length() - 1;
+            }
+        } else if (nextChar == '*') {
+            for (i = i + 2; i < source.length(); i++) {
+                if (source.charAt(i) == '*' && (i + 1 < source.length() && source.charAt(i + 1) == '/')) {
+                    i++;
+                    break;
                 }
-                tokens.add(new Token(keywords.getOrDefault(s, TokenType.IDENFR), line, s));
-            } else if (Character.isDigit(p)) { //数字
-                String s = "";
-                for (int j = i; j < contentLength; j++) {
-                    char d = source.charAt(j);
-                    if (Character.isDigit(d)) s += d;
-                    else {
-                        i = j - 1;
-                        break;
-                    }
+                if (source.charAt(i) == '\n') {
+                    line++;
                 }
-                tokens.add(new Token(TokenType.INTCON, line, s));
-            } else if (p == '\"') { // 字符串
-                String s = "\"";
-                for (int j = i+1; j < contentLength; j++) {
-                    char d = source.charAt(j);
-                    if (d != '\"') {
-                        s += d;
-                        if (d == 32 || d == 33 || d >= 40 && d <= 126) { //Normal Char
-                            if (d == 92 && (j + 1 == contentLength || source.charAt(j + 1) != 'n')) {
-                                // 错误
-                            }
-                        } else if (d == 37) { //Format Char
-                            if (j + 1 == contentLength || source.charAt(j + 1) != 'd') {
-                                // 错误
-                            }
-                        } else {
-                            // 错误
-                        }
-                    } else {
-                        i = j; // i 指到 " 的位置
-                        s += "\"";
-                        break;
-                    }
-                }
-                tokens.add(new Token(TokenType.STRCON, line, s));
-            } else if (p == '!') { // ! or !=
-                if (next != '=') tokens.add(new Token(TokenType.NOT, line, "!"));
-                else {
+            }
+        } else {
+            tokens.add(new Token(TokenType.DIV, line, "/"));
+        }
+
+        return i;
+    }
+
+    private int handleSymbolsAndOperators(String source, int startIndex, char nextChar) {
+        int i = startIndex;
+        char currentChar = source.charAt(i);
+
+        switch (currentChar) {
+            case '!':
+                if (nextChar == '=') {
                     tokens.add(new Token(TokenType.NEQ, line, "!="));
                     i++;
+                } else {
+                    tokens.add(new Token(TokenType.NOT, line, "!"));
                 }
-            } else if (p == '&') { // &&
-                if (next == '&') {
+                break;
+            case '&':
+                if (nextChar == '&') {
                     tokens.add(new Token(TokenType.AND, line, "&&"));
                     i++;
                 }
-            } else if (p == '|') { // ||
-                if (next == '|') {
-                    tokens.add (new Token(TokenType.OR, line, "||"));
+                break;
+            case '|':
+                if (nextChar == '|') {
+                    tokens.add(new Token(TokenType.OR, line, "||"));
                     i++;
                 }
-            } else if (p == '+') {
+                break;
+            case '+':
                 tokens.add(new Token(TokenType.PLUS, line, "+"));
-            } else if (p == '-') {
+                break;
+            case '-':
                 tokens.add(new Token(TokenType.MINU, line, "-"));
-            } else if (p == '*') {
+                break;
+            case '*':
                 tokens.add(new Token(TokenType.MULT, line, "*"));
-            } else if (p == '/') {// 除法 OR 单行注释// OR 多行注释 /*
-                if (next == '/') {
-                    // 查找从i + 2位置开始的第一个换行符\n的索引。表示单行注释的结束位置。
-                    int j = source.indexOf('\n', i + 2);
-                    // 如果没有找到换行符，注释直到文件的末尾
-                    if (j == -1) j = contentLength;
-                    i = j - 1;// 指向注释结束后的字符
-                } else if (next == '*') {
-                    for (int j=i+2; j< contentLength;j++) {
-                        char e = source.charAt(j);
-                        if (e=='\n') line++;
-                        else if (e=='*' && source.charAt(j+1)=='/') { // j+1有可能超出contentLength, 需要错误处理!!!
-                            i = j+1;
-                            break;
-                        }
-                    }
-                } else tokens.add(new Token(TokenType.DIV, line, "/"));
-
-            } else if (p == '%') {
-                tokens.add (new Token(TokenType.MOD, line, "%"));
-            } else if (p == '<') { // < OR <=
-                if (next == '=') {
-                    tokens.add (new Token(TokenType.LEQ, line , "<="));
+                break;
+            case '%':
+                tokens.add(new Token(TokenType.MOD, line, "%"));
+                break;
+            case '<':
+                if (nextChar == '=') {
+                    tokens.add(new Token(TokenType.LEQ, line, "<="));
                     i++;
                 } else {
                     tokens.add(new Token(TokenType.LSS, line, "<"));
                 }
-            } else if (p == '>') { // < OR <=
-                if (next == '=') {
-                    tokens.add (new Token(TokenType.GEQ, line , ">="));
+                break;
+            case '>':
+                if (nextChar == '=') {
+                    tokens.add(new Token(TokenType.GEQ, line, ">="));
                     i++;
                 } else {
                     tokens.add(new Token(TokenType.GRE, line, ">"));
                 }
-            } else if (p ==  '=') {
-                if (next == '=') {
-                    tokens.add(new Token( TokenType.EQL, line, "=="));
+                break;
+            case '=':
+                if (nextChar == '=') {
+                    tokens.add(new Token(TokenType.EQL, line, "=="));
                     i++;
                 } else {
-                    tokens.add(new Token( TokenType.ASSIGN, line, "="));
+                    tokens.add(new Token(TokenType.ASSIGN, line, "="));
                 }
-            } else if (p == ';') tokens.add(new Token(TokenType.SEMICN, line, ";"));
-            else if (p == ',') tokens.add(new Token(TokenType.COMMA, line, ","));
-            else if (p == '(') tokens.add(new Token(TokenType.LPARENT, line, "("));
-            else if (p == ')') tokens.add(new Token(TokenType.RPARENT, line, ")"));
-            else if (p == '[') tokens.add(new Token(TokenType.LBRACK, line, "["));
-            else if (p == ']') tokens.add(new Token(TokenType.RBRACK, line, "]"));
-            else if (p == '{') tokens.add(new Token(TokenType.LBRACE, line, "{"));
-            else if (p == '}') tokens.add(new Token(TokenType.RBRACE, line, "}"));
-
+                break;
+            case ';':
+                tokens.add(new Token(TokenType.SEMICN, line, ";"));
+                break;
+            case ',':
+                tokens.add(new Token(TokenType.COMMA, line, ","));
+                break;
+            case '(':
+                tokens.add(new Token(TokenType.LPARENT, line, "("));
+                break;
+            case ')':
+                tokens.add(new Token(TokenType.RPARENT, line, ")"));
+                break;
+            case '[':
+                tokens.add(new Token(TokenType.LBRACK, line, "["));
+                break;
+            case ']':
+                tokens.add(new Token(TokenType.RBRACK, line, "]"));
+                break;
+            case '{':
+                tokens.add(new Token(TokenType.LBRACE, line, "{"));
+                break;
+            case '}':
+                tokens.add(new Token(TokenType.RBRACE, line, "}"));
+                break;
+            default:
+                // TODO: Handle unexpected characters if necessary
+                break;
         }
+
+        return i;
     }
+
+
 
     public void printLexAns() {
         for (Token token : tokens) {
