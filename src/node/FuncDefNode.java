@@ -6,12 +6,12 @@ import utils.IOUtils;
 
 public class FuncDefNode {
     // FuncDef → FuncType Ident '(' [FuncFParams] ')' Block
-    private FuncTypeNode funcTypeNode;
-    private Token ident;
-    private Token leftBracket;
-    private FuncFParamsNode funcFParamsNode=null;
-    private Token rightBracket;
-    private BlockNode blockNode;
+    public FuncTypeNode funcTypeNode;
+    public Token ident;
+    public Token leftBracket;
+    public FuncFParamsNode funcFParamsNode=null;
+    public Token rightBracket;
+    public BlockNode blockNode;
 
     public FuncDefNode(FuncTypeNode funcTypeNode, Token ident, Token leftBracket, FuncFParamsNode funcFParamsNode, Token rightBracket, BlockNode blockNode) {
         this.funcTypeNode = funcTypeNode;

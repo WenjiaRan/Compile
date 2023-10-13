@@ -7,40 +7,30 @@ import utils.IOUtils;
 import java.util.List;
 
 public class VarDeclNode {
-//    VarDecl → BType VarDef { ',' VarDef } ';'
-    private BTypeNode bTypeNode;
-//    private VarDefNode varDefNode;
-    private List<Token> commaTokens;
-    private List<VarDefNode> varDefNodes;
-    private Token semicolon;
+    public BTypeNode bTypeNode = null;
+    public List<Token> commaTokens = null;
+    public Token semicolon = null;
+    public List<VarDefNode> varDefNodes = null;
 
-    public VarDeclNode(BTypeNode bTypeNode, List<VarDefNode> varDefNodes,  List<Token> commaTokens, Token semicolon) {
+    public VarDeclNode(BTypeNode bTypeNode, List<VarDefNode> varDefNodes, List<Token> commaTokens, Token semicolon) {
         this.bTypeNode = bTypeNode;
-//        this.varDefNode = varDefNode;
-        this.commaTokens = commaTokens;
         this.varDefNodes = varDefNodes;
+        this.commaTokens = commaTokens;
         this.semicolon = semicolon;
     }
 
-    void print(){
+    void print() {
         bTypeNode.print();
         varDefNodes.get(0).print();
-        for(int i=0;i<commaTokens.size();i++){
-            IOUtils.write(commaTokens.get(i).toString());
-            varDefNodes.get(i+1).print();
+
+        int index = 0;
+        while (index < commaTokens.size()) {
+            IOUtils.write(commaTokens.get(index).toString());
+            varDefNodes.get(index + 1).print();
+            index++;
         }
+
         IOUtils.write(semicolon.toString());
         IOUtils.write(Parser.nodeType.get(NodeType.VarDecl));
     }
-
-
-
-
-
-
-
-
-
-
-
 }

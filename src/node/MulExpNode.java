@@ -8,8 +8,8 @@ public class MulExpNode {
     //MulExp → UnaryExp | MulExp ('*' | '/' | '%') UnaryExp
     // 消除左递归
     // MulExp → UnaryExp {('*' | '/' | '%') UnaryExp}
-    private List<UnaryExpNode> unaryExpNodes;
-    private List<Token> operations;
+    public List<UnaryExpNode> unaryExpNodes;
+    public List<Token> operations;
 
     public MulExpNode(List<UnaryExpNode> unaryExpNodes,List<Token> operations) {
         this.operations = operations;

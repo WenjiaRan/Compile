@@ -7,14 +7,12 @@ import utils.IOUtils;
 import java.util.List;
 
 public class VarDefNode {
-    // VarDef → Ident { '[' ConstExp ']' }| Ident { '[' ConstExp ']' } '=' InitVal
-    private Token identToken;
-    private List<Token> leftSquareBrackTokens;
-    private List<ConstExpNode> constExpNodes;
-    private List<Token> rightSquareBrackTokens;
-
-    private Token assignToken=null;
-    private InitValNode initValNode;
+    public Token assignToken = null;
+    public List<ConstExpNode> constExpNodes = null;
+    public Token identToken = null;
+    public InitValNode initValNode = null;
+    public List<Token> leftSquareBrackTokens = null;
+    public List<Token> rightSquareBrackTokens = null;
 
     public VarDefNode(Token identToken, List<Token> leftSquareBrackTokens, List<ConstExpNode> constExpNodes, List<Token> rightSquareBrackTokens, Token assignToken, InitValNode initValNode) {
         this.identToken = identToken;
@@ -25,17 +23,22 @@ public class VarDefNode {
         this.initValNode = initValNode;
     }
 
-    public void print(){
+    public void print() {
         IOUtils.write(identToken.toString());
-        for(int i=0;i<leftSquareBrackTokens.size();i++){
-            IOUtils.write(leftSquareBrackTokens.get(i).toString());
-            constExpNodes.get(i).print();
-            IOUtils.write(rightSquareBrackTokens.get(i).toString());
+
+        int index = 0;
+        while (index < leftSquareBrackTokens.size()) {
+            IOUtils.write(leftSquareBrackTokens.get(index).toString());
+            constExpNodes.get(index).print();
+            IOUtils.write(rightSquareBrackTokens.get(index).toString());
+            index++;
         }
-        if (assignToken!=null){
+
+        if (assignToken != null) {
             IOUtils.write(assignToken.toString());
-            InitValNode.print();
+            initValNode.print();
         }
+
         IOUtils.write(Parser.nodeType.get(NodeType.VarDef));
     }
 }

@@ -1,9 +1,9 @@
 package token;
 
 public class Token {
-    private TokenType type;
-    private int lineNumber;
-    private String content;
+    public TokenType type;
+    public int lineNumber;
+    public String content;
 
     public Token(TokenType type, int lineNumber, String content) {
         this.type = type;

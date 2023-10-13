@@ -7,9 +7,9 @@ import utils.IOUtils;
 public class LOrExpNode {
     //LOrExp → LAndExp | LOrExp '||' LAndExp
     //LOrExp → LAndExp['||' LOrExp]
-    private LAndExpNode lAndExpNode;
-    private Token token;
-    private LOrExpNode lOrExpNode;;
+    public LAndExpNode lAndExpNode;
+    public Token token;
+    public LOrExpNode lOrExpNode;;
 
     public LOrExpNode(LAndExpNode lAndExpNode, Token token, LOrExpNode lOrExpNode) {
         this.lAndExpNode = lAndExpNode;

@@ -5,7 +5,7 @@ import token.Token;
 import utils.IOUtils;
 
 public class FuncTypeNode {
-    private Token token;
+    public Token token;
 
 
     public FuncTypeNode(Token token) {

@@ -6,13 +6,13 @@ import utils.IOUtils;
 
 public class PrimaryExpNode {
     //PrimaryExp → '(' Exp ')' | LVal | Number
-    private Token leftBracketToken;
-    private ExpNode expNode;
-    private Token rightBracketToken;
+    public Token leftBracketToken;
+    public ExpNode expNode;
+    public Token rightBracketToken;
 
-    private LValNode lValNode;
+    public LValNode lValNode;
 
-    private NumberNode numberNode;
+    public NumberNode numberNode;
 
     public PrimaryExpNode(NumberNode numberNode) {
         this.numberNode = numberNode;

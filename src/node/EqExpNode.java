@@ -10,9 +10,9 @@ import java.util.List;
 public class EqExpNode {
     //EqExp → RelExp | EqExp ('==' | '!=') RelExp
     //EqExp -> RelExp[('==' | '!=')EqExp]
-    private RelExpNode relExpNode;
-    private Token operator;
-    private EqExpNode eqExpNode;
+    public RelExpNode relExpNode;
+    public Token operator;
+    public EqExpNode eqExpNode;
 
     public EqExpNode(RelExpNode relExpNode, Token operator, EqExpNode eqExpNode) {
         this.relExpNode = relExpNode;

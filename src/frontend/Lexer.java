@@ -10,25 +10,25 @@ import java.util.List;
 import java.util.Map;
 
 public class Lexer {
-    private static final Lexer instance = new Lexer();
+    public static final Lexer instance = new Lexer();
 
     public static Lexer getInstance() {
         return instance;
     }
 
-    private List<Token> tokens = new ArrayList<>();
+    public List<Token> tokens = new ArrayList<>();
 
     public List<Token> getTokens() {
         return tokens;
     }
-    //private String source; //输入编译器的源程序字符串
-    private char p; //指向下一个待解析的单词的起始字符
-    private String token;
-    private TokenType type;
-    private int line;
-    private int number;
+    //public String source; //输入编译器的源程序字符串
+    public char p; //指向下一个待解析的单词的起始字符
+    public String token;
+    public TokenType type;
+    public int line;
+    public int number;
     // 关键字
-    private Map<String, TokenType> keywords;
+    public Map<String, TokenType> keywords;
 
     public Lexer() {
         keywords = new HashMap<>();
@@ -95,7 +95,7 @@ public class Lexer {
         }
     }
 
-    private int handleIdentifierOrKeyword(String source, int startIndex) {
+    public int handleIdentifierOrKeyword(String source, int startIndex) {
         int i = startIndex;
         StringBuilder identifier = new StringBuilder();
 
@@ -109,7 +109,7 @@ public class Lexer {
         return i - 1;
     }
 
-    private int handleNumber(String source, int startIndex) {
+    public int handleNumber(String source, int startIndex) {
         int i = startIndex;
         StringBuilder number = new StringBuilder();
 
@@ -123,7 +123,7 @@ public class Lexer {
         return i - 1;
     }
 
-    private int handleString(String source, int startIndex) {
+    public int handleString(String source, int startIndex) {
         int i = startIndex + 1; // Start right after the opening "
         StringBuilder s = new StringBuilder("\"");
 
@@ -153,7 +153,7 @@ public class Lexer {
         return i;
     }
 
-    private int handleCommentOrDivide(String source, int startIndex, char nextChar) {
+    public int handleCommentOrDivide(String source, int startIndex, char nextChar) {
         int i = startIndex;
 
         if (nextChar == '/') {
@@ -178,7 +178,7 @@ public class Lexer {
         return i;
     }
 
-    private int handleSymbolsAndOperators(String source, int startIndex, char nextChar) {
+    public int handleSymbolsAndOperators(String source, int startIndex, char nextChar) {
         int i = startIndex;
         char currentChar = source.charAt(i);
 

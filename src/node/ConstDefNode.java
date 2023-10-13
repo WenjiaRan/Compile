@@ -6,16 +6,15 @@ import utils.IOUtils;
 import java.util.List;
 
 public class ConstDefNode {
-    //常数定义 ConstDef → Ident { '[' ConstExp ']' } '=' ConstInitVal // 包含普通变量、一维
-    //数组、二维数组共三种情况
-    private Token identToken;
-    private List<Token> leftBracketsTokens;
-    private List<ConstExpNode> constExpNodes;
-    private List<Token> rightBracketsTokens;
-    private Token equalToken;
-    private ConstInitValNode constInitValNode;
+    public List<ConstExpNode> constExpNodes = null;
+    public ConstInitValNode constInitValNode = null;
+    public Token equalToken = null;
+    public Token identToken = null;
+    public List<Token> leftBracketsTokens = null;
+    public List<Token> rightBracketsTokens = null;
 
-    public ConstDefNode(Token identToken, List<Token> leftBracketsTokens, List<ConstExpNode> constExpNodes, List<Token> rightBracketsTokens, Token equalToken, ConstInitValNode constInitValNode) {
+    public ConstDefNode(Token identToken, List<Token> leftBracketsTokens, List<ConstExpNode> constExpNodes,
+                        List<Token> rightBracketsTokens, Token equalToken, ConstInitValNode constInitValNode) {
         this.identToken = identToken;
         this.leftBracketsTokens = leftBracketsTokens;
         this.constExpNodes = constExpNodes;
@@ -24,24 +23,18 @@ public class ConstDefNode {
         this.constInitValNode = constInitValNode;
     }
 
-    void print(){
+    void print() {
         IOUtils.write(identToken.toString());
-        for(int i=0;i<leftBracketsTokens.size();i++){
-            IOUtils.write(leftBracketsTokens.get(i).toString());
-            ConstExpNode.print();
 
+        int index = 0;
+        while (index < leftBracketsTokens.size()) {
+            IOUtils.write(leftBracketsTokens.get(index).toString());
+            constExpNodes.get(index).print();
+            IOUtils.write(rightBracketsTokens.get(index).toString());
+            index++;
         }
+
+        IOUtils.write(equalToken.toString());
+        constInitValNode.print();
     }
-
-
-
-
-
-
-
-
-
-
-
-
 }

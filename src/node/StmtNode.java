@@ -21,42 +21,42 @@ public class StmtNode {
     public enum StmtType {
         LValAssignExp,Exp,Block,If,For,Break,Continue,Return,LValGetint,Printf
     }
-    private StmtType stmtType;
-    private LValNode lValNode;
-    private Token assginToken;
-    private ExpNode expNode;
-    private List<ExpNode> expNodes;
-    private Token semicolonToken;
+    public StmtType stmtType;
+    public LValNode lValNode;
+    public Token assginToken;
+    public ExpNode expNode;
+    public List<ExpNode> expNodes;
+    public Token semicolonToken;
 
-    private BlockNode blockNode;
+    public BlockNode blockNode;
 
-    private Token ifToken;
-    private Token leftParenToken;
-    private CondNode condNode;
-    private Token rightParenToken;
-    private List<StmtNode> stmtNodes;
-    private Token elseToken;
+    public Token ifToken;
+    public Token leftParenToken;
+    public CondNode condNode;
+    public Token rightParenToken;
+    public List<StmtNode> stmtNodes;
+    public Token elseToken;
 
-    private Token forToken;
-    private List<ForStmtNode> forStmtNodes;
-    private List<Token> semicolonTokens;
+    public Token forToken;
+    public List<ForStmtNode> forStmtNodes;
+    public List<Token> semicolonTokens;
 
-    private Token breakToken;
+    public Token breakToken;
 
-    private Token continueToken;
+    public Token continueToken;
 
-    private Token returnToken;
+    public Token returnToken;
 
-    private Token getintToken;
+    public Token getintToken;
 
-    private Token printfToken;
-    private FormatStringNode formatString;
-    private Token commaToken;
-    private List<Token> commaTokens;
+    public Token printfToken;
+    public Token formatString;
+    public Token commaToken;
+    public List<Token> commaTokens;
 
 
 
-    public StmtNode(StmtType stmtType, List<ExpNode> expNodes, Token semicolonToken, Token leftParenToken, Token rightParenToken, Token printfToken, FormatStringNode formatString, List<Token> commaTokens) {
+    public StmtNode(StmtType stmtType, List<ExpNode> expNodes, Token semicolonToken, Token leftParenToken, Token rightParenToken, Token printfToken, Token formatString, List<Token> commaTokens) {
         this.stmtType = stmtType;
         this.expNodes = expNodes;
         this.semicolonToken = semicolonToken;
@@ -131,20 +131,8 @@ public class StmtNode {
 
     public void print(){
         switch (stmtType) {
-            case LValAssignExp:
-                printLValAssignExp();
-                break;
-            case Exp:
-                printExp();
-                break;
             case Block:
                 printBlock();
-                break;
-            case If:
-                printIf();
-                break;
-            case For:
-                printFor();
                 break;
             case Break:
                 printBreak();
@@ -152,8 +140,17 @@ public class StmtNode {
             case Continue:
                 printContinue();
                 break;
-            case Return:
-                printReturn();
+            case Exp:
+                printExp();
+                break;
+            case For:
+                printFor();
+                break;
+            case If:
+                printIf();
+                break;
+            case LValAssignExp:
+                printLValAssignExp();
                 break;
             case LValGetint:
                 printLValGetint();
@@ -161,29 +158,33 @@ public class StmtNode {
             case Printf:
                 printPrintf();
                 break;
+            case Return:
+                printReturn();
+                break;
         }
         IOUtils.write(Parser.nodeType.get(NodeType.Stmt));
     }
 
-    private void printLValAssignExp() {
+
+    public void printLValAssignExp() {
         lValNode.print();
         IOUtils.write(assginToken.toString());
         expNode.print();
         IOUtils.write(semicolonToken.toString());
     }
 
-    private void printExp() {
+    public void printExp() {
         if (expNode!=null) {
             expNode.print();
         }
         IOUtils.write(semicolonToken.toString());
     }
 
-    private void printBlock() {
+    public void printBlock() {
         blockNode.print();
     }
 
-    private void printIf() {
+    public void printIf() {
         IOUtils.write(ifToken.toString());
         IOUtils.write(leftParenToken.toString());
         condNode.print();
@@ -195,7 +196,7 @@ public class StmtNode {
         }
     }
 
-    private void printFor() {
+    public void printFor() {
         IOUtils.write(forToken.toString());
         IOUtils.write(leftParenToken.toString());
         if (forStmtNodes.size()>0){
@@ -213,17 +214,17 @@ public class StmtNode {
         stmtNodes.get(0).print();
     }
 
-    private void printBreak() {
+    public void printBreak() {
         IOUtils.write(breakToken.toString());
         IOUtils.write(semicolonToken.toString());
     }
 
-    private void printContinue() {
+    public void printContinue() {
         IOUtils.write(continueToken.toString());
         IOUtils.write(semicolonToken.toString());
     }
 
-    private void printReturn() {
+    public void printReturn() {
         IOUtils.write(returnToken.toString());
         if (expNode!=null){
             expNode.print();
@@ -231,7 +232,7 @@ public class StmtNode {
         IOUtils.write(semicolonToken.toString());
     }
 
-    private void printLValGetint() {
+    public void printLValGetint() {
         lValNode.print();
         IOUtils.write(assginToken.toString());
         IOUtils.write(getintToken.toString());
@@ -240,10 +241,10 @@ public class StmtNode {
         IOUtils.write(semicolonToken.toString());
     }
 
-    private void printPrintf() {
+    public void printPrintf() {
         IOUtils.write(printfToken.toString());
         IOUtils.write(leftParenToken.toString());
-        formatString.print();
+        IOUtils.write(formatString.toString());
         for(int i=0;i<commaTokens.size();i++) {
             IOUtils.write(commaTokens.get(i).toString());
             expNodes.get(i).print();

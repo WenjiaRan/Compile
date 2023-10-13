@@ -7,36 +7,40 @@ import utils.IOUtils;
 import java.util.List;
 
 public class BlockNode {
-    // Block → '{' { BlockItem } '}'
-    private Token leftBracket;
-    private List<BlockItemNode> blockItemNodes;
-    private Token rightBracket;
+    public List<BlockItemNode> blockItemNodes = null;
+    public Token leftBracket = null;
+    public Token rightBracket = null;
 
     public BlockNode(Token leftBracket, List<BlockItemNode> blockItemNodes, Token rightBracket) {
-        this.leftBracket = leftBracket;
         this.blockItemNodes = blockItemNodes;
+        this.leftBracket = leftBracket;
         this.rightBracket = rightBracket;
     }
 
-    public void print(){
+    public void print() {
         IOUtils.write(leftBracket.toString());
-        for(BlockItemNode node : blockItemNodes){
-            node.print();
+
+        int index = 0;
+        while (index < blockItemNodes.size()) {
+            blockItemNodes.get(index).print();
+            index++;
         }
+
         IOUtils.write(rightBracket.toString());
         IOUtils.write(Parser.nodeType.get(NodeType.Block));
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

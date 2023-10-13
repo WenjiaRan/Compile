@@ -9,20 +9,10 @@ public class UnaryOpNode {
 
     Token token;
 
-    public UnaryOpNode(Token token) {
-        this.token = token;
-    }
-
-    public Token getToken() {
-        return token;
-    }
 
     public void print() {
         IOUtils.write(token.toString());
         IOUtils.write(Parser.nodeType.get(NodeType.UnaryOp));
     }
 
-    public String getStr() {
-        return token.getContent();
-    }
 }

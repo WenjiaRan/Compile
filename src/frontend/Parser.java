@@ -8,13 +8,13 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
 
-import static node.NodeType.BType;
+import static node.NodeType.*;
 
 
 public class Parser {
-    private List<Token> tokens;
-    private int index =0;// token的索引
-    private CompUnitNode compUnitNode;
+    public List<Token> tokens;
+    public int index =0;// token的索引
+    public CompUnitNode compUnitNode;
     public static Map<NodeType, String> nodeType;
     public Parser(List<Token> tokens) {
         this.tokens = tokens;
@@ -60,34 +60,42 @@ public class Parser {
         this.compUnitNode = CompUnit();
     }
 
-    private Token match(TokenType tokenType) {
+    public Token match(TokenType tokenType) {
         if (tokens.get(index).getType() == tokenType) {
             return tokens.get(index++);
         } else {
             throw new RuntimeException("Syntax error: " + tokens.get(index).toString() + " at line " + tokens.get(index).getLineNumber());
         }
     }
-    private CompUnitNode CompUnit() {
+    public CompUnitNode CompUnit() {
         // CompUnit -> {Decl} {FuncDef} MainFuncDef
         List<DeclNode> declNodes = new ArrayList<>();
         List<FuncDefNode> funcDefNodes = new ArrayList<>();
-        MainFuncDefNode mainFuncDefNode ;
+        MainFuncDefNode mainFuncDefNode;
+
         // 判断是否直接就是main
-        while(tokens.get(index+1).getType()!=TokenType.MAINTK && tokens.get(index + 2).getType() != TokenType.LPARENT){
+        for (TokenType nextType = tokens.get(index + 1).getType(), nextNextType = tokens.get(index + 2).getType();
+             nextType != TokenType.MAINTK && nextNextType != TokenType.LPARENT;
+             nextType = tokens.get(index + 1).getType(), nextNextType = tokens.get(index + 2).getType()) {
             // 可能有Decl
             DeclNode declNode = Decl();
             declNodes.add(declNode);
         }
-        while (tokens.get(index+1).getType() != TokenType.MAINTK) {
+
+        for (TokenType nextType = tokens.get(index + 1).getType();
+             nextType != TokenType.MAINTK;
+             nextType = tokens.get(index + 1).getType()) {
             // FuncDef
             FuncDefNode funcDefNode = funcDef();
             funcDefNodes.add(funcDefNode);
         }
+
         mainFuncDefNode = MainFuncDef();
         return new CompUnitNode(declNodes, funcDefNodes, mainFuncDefNode);
     }
 
-    private DeclNode Decl() {
+
+    public DeclNode Decl() {
         //Decl → ConstDecl | VarDecl
         ConstDeclNode constDeclNode;
         VarDeclNode varDeclNode;
@@ -101,7 +109,7 @@ public class Parser {
         }
     }
 
-    private ConstDeclNode ConstDecl() {
+    public ConstDeclNode ConstDecl() {
         // ConstDecl -> 'const' BType ConstDef { ',' ConstDef } ';'
         Token constToken = match(TokenType.CONSTTK);
         BTypeNode bTypeNode = BType();
@@ -119,11 +127,11 @@ public class Parser {
         return new ConstDeclNode(constToken,bTypeNode,constDefList,commaList,semicnToken);
     }
 
-    private BTypeNode BType(){
+    public BTypeNode BType(){
         Token token=match(TokenType.INTTK);
         return new BTypeNode(token);
     }
-    private ConstDefNode ConstDef(){
+    public ConstDefNode ConstDef(){
         // ConstDef → Ident { '[' ConstExp ']' } '=' ConstInitVal
         Token ident=match(TokenType.IDENFR);
         List<Token> leftSquareBrackList=new ArrayList<>();
@@ -140,7 +148,7 @@ public class Parser {
         constInit=ConstInitVal();
         return new ConstDefNode(ident, leftSquareBrackList, constExpNodeList,rightSquareBrackList,assignToken,constInit);
     }
-    private ConstInitValNode ConstInitVal(){
+    public ConstInitValNode ConstInitVal(){
         // ConstInitVal → ConstExp| '{' [ ConstInitVal { ',' ConstInitVal } ] '}'
         if (tokens.get(index).getType() !=TokenType.LBRACE){
             ConstExpNode constExpNode=ConstExp();
@@ -164,7 +172,7 @@ public class Parser {
         }
     }
 
-    private VarDeclNode VarDecl(){
+    public VarDeclNode VarDecl(){
         //VarDecl → BType VarDef { ',' VarDef } ';'
         BTypeNode bTypeNode;
         List<VarDefNode> varDefNodeList = new ArrayList<VarDefNode>();
@@ -181,15 +189,36 @@ public class Parser {
         return new VarDeclNode(bTypeNode,varDefNodeList,commaTokens,semicn);
     }
 
-//    private VarDefNode VarDef() {
-//        Token identToken;
-//        List<Token> leftBrack=new ArrayList<Token>();
-//        List<ConstExpNode> constExpNodeList=new ArrayList<ConstExpNode>();
-//        List<Token> rightBrack=new ArrayList<Token>();
-//
-//        Token assignToken;
-//        InitValNode initValNode;
-//    }
+    public VarDefNode VarDef() {
+//        VarDef → Ident { '[' ConstExp ']' }
+        //| Ident { '[' ConstExp ']' } '=' InitVal
+        Token identToken;
+        List<Token> leftBracks=new ArrayList<Token>();
+        List<ConstExpNode> constExpNodeList=new ArrayList<ConstExpNode>();
+        List<Token> rightBracks=new ArrayList<Token>();
+
+        Token assignToken;
+        InitValNode initValNode;
+
+        identToken=match(TokenType.IDENFR);
+        while(tokens.get(index).content.equals('[')){
+            leftBracks.add(match(TokenType.LBRACK));
+            constExpNodeList.add(ConstExp());
+            rightBracks.add(match(TokenType.RBRACK));
+        }
+        if(!tokens.get(index).content.equals('=')){
+            return new VarDefNode(identToken,leftBracks,constExpNodeList,rightBracks,null,null);
+        }
+        else {
+            assignToken=match(TokenType.ASSIGN );
+            initValNode=InitVal();
+            return new VarDefNode(identToken,leftBracks,constExpNodeList,rightBracks,assignToken,initValNode);
+        }
+    }
+    public InitValNode InitVal() {
+        //InitVal → Exp | '{' [ InitVal { ',' InitVal } ]
+        ExpNode
+    }
 }
 
 

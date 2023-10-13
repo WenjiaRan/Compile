@@ -5,7 +5,7 @@ import utils.IOUtils;
 
 public class ExpNode {
     //Exp → AddExp
-    private AddExpNode addExpNode;
+    public AddExpNode addExpNode;
 
     public ExpNode(AddExpNode addExpNode) {
         this.addExpNode = addExpNode;

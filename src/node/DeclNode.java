@@ -5,8 +5,8 @@ import utils.IOUtils;
 
 public class DeclNode {
     // 声明 Decl → ConstDecl | VarDecl
-    private ConstDeclNode constDeclNode=null;
-    private VarDeclNode varDeclNode=null;
+    public ConstDeclNode constDeclNode=null;
+    public VarDeclNode varDeclNode=null;
 
     public DeclNode(VarDeclNode varDeclNode) {
         this.varDeclNode = varDeclNode;

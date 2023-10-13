@@ -7,12 +7,11 @@ import utils.IOUtils;
 import java.util.List;
 
 public class FuncFParamNode {
-    // FuncFParam → BType Ident ['[' ']' { '[' ConstExp ']' }]
-    private BTypeNode bTypeNode;
-    private Token ident;
-    private List<Token>leftSqareBrack;
-    private List<Token>rightSqareBrack;
-    private List<ConstExpNode> constExpNodes;
+    public BTypeNode bTypeNode;
+    public Token ident;
+    public List<ConstExpNode> constExpNodes;
+    public List<Token> leftSqareBrack;
+    public List<Token> rightSqareBrack;
 
     public FuncFParamNode(BTypeNode bTypeNode, Token ident, List<Token> leftSqareBrack, List<Token> rightSqareBrack, List<ConstExpNode> constExpNodes) {
         this.bTypeNode = bTypeNode;
@@ -22,40 +21,22 @@ public class FuncFParamNode {
         this.constExpNodes = constExpNodes;
     }
 
-    public void print(){
+    public void print() {
         bTypeNode.print();
         IOUtils.write(ident.toString());
-        if(leftSqareBrack.size()>0){
+
+        if (!leftSqareBrack.isEmpty()) {
             IOUtils.write(leftSqareBrack.get(0).toString());
             IOUtils.write(rightSqareBrack.get(0).toString());
-            for(int i=0;i< constExpNodes.size();i++){
-                IOUtils.write(leftSqareBrack.get(i + 1).toString());
-                constExpNodes.print();
-                IOUtils.write(rightSqareBrack.get(i+1).toString());
+
+            int index = 0;
+            while (index < constExpNodes.size()) {
+                IOUtils.write(leftSqareBrack.get(index + 1).toString());
+                constExpNodes.get(index).print();
+                IOUtils.write(rightSqareBrack.get(index + 1).toString());
+                index++;
             }
         }
         IOUtils.write(Parser.nodeType.get(NodeType.FuncFParam));
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }

@@ -9,27 +9,15 @@ public class RelExpNode {
     // RELExp -> AddExp RELExp'
     // RelExp' -> ('<' | '>' | '<=' | '>=') AddExp RELExp'|E
     // RELExp -> AddExp[('<' | '>' | '<=' | '>=')RELExp]
-    private AddExpNode addExpNode;
-    private Token operator;
-    private RelExpNode relExpNode;
+    public AddExpNode addExpNode;
+    public Token operator;
+    public RelExpNode relExpNode;
 
 
     public RelExpNode(AddExpNode addExpNode, Token operator, RelExpNode relExpNode) {
         this.addExpNode = addExpNode;
         this.operator = operator;
         this.relExpNode = relExpNode;
-    }
-
-    public AddExpNode getAddExpNode() {
-        return addExpNode;
-    }
-
-    public Token getOperator() {
-        return operator;
-    }
-
-    public RelExpNode getRelExpNode() {
-        return relExpNode;
     }
 
     public void print() {

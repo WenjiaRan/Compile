@@ -7,40 +7,43 @@ import utils.IOUtils;
 import java.util.List;
 
 public class InitValNode {
-    // InitVal → Exp | '{' [ InitVal { ',' InitVal } ]
-    private ExpNode expNode;
-
-    private Token leftBrace;
-    private List<InitValNode> initValNodes;
-    private List<Token> commaTokens;
-    private Token rightBrace;
+    public List<Token> commaTokens;
+    public List<InitValNode> initValNodes;
+    public ExpNode expNode;
+    public Token leftBrace;
+    public Token rightBrace;
 
     public InitValNode(ExpNode expNode) {
         this.expNode = expNode;
     }
 
     public InitValNode(Token leftBrace, List<InitValNode> initValNodes, List<Token> commaTokens, Token rightBrace) {
-        this.leftBrace = leftBrace;
-        this.initValNodes = initValNodes;
         this.commaTokens = commaTokens;
+        this.initValNodes = initValNodes;
+        this.leftBrace = leftBrace;
         this.rightBrace = rightBrace;
     }
-
-    void print(){
-        if(expNode!=null){
+    // InitVal → Exp | '{' [ InitVal { ',' InitVal } ]
+    void print() {
+        if (expNode != null) {
             expNode.print();
-        }
-        else {
+        } else {
             IOUtils.write(leftBrace.toString());
-            if(initValNodes.size()>0){
+
+            if (!initValNodes.isEmpty()) {
                 initValNodes.get(0).print();
-                for(int i=0;i<commaTokens.size();i++){
-                    IOUtils.write(commaTokens.get(i).toString());
-                    initValNodes.get(i+1).print();
+
+                int index = 0;
+                while (index <= commaTokens.size()) {
+                    IOUtils.write(commaTokens.get(index).toString());
+                    initValNodes.get(index+1).print();
+                    index++;
                 }
             }
+
             IOUtils.write(rightBrace.toString());
         }
+
         IOUtils.write(Parser.nodeType.get(NodeType.InitVal));
     }
 }

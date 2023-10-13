@@ -7,33 +7,26 @@ import utils.IOUtils;
 import java.util.List;
 
 public class FuncFParamsNode {
-    // FuncFParams → FuncFParam { ',' FuncFParam }
-    private List<FuncFParamNode> funcFParamNodes;
-    private List<Token> commaTokens;
+    public List<Token> commaTokens;
+    public List<FuncFParamNode> funcFParamNodes;
 
     public FuncFParamsNode(List<FuncFParamNode> funcFParamNodes, List<Token> commaTokens) {
-        this.funcFParamNodes = funcFParamNodes;
         this.commaTokens = commaTokens;
+        this.funcFParamNodes = funcFParamNodes;
     }
 
-    public void print(){
-        funcFParamNodes.get(0).print();
-        for(int i=0;i<commaTokens.size();i++){
-            IOUtils.write(commaTokens.get(i).toString());
-            funcFParamNodes.get(i+1).print();
+    public void print() {
+        if (!funcFParamNodes.isEmpty()) {
+            funcFParamNodes.get(0).print();
+
+            int index = 0;
+            while (index < commaTokens.size()) {
+                IOUtils.write(commaTokens.get(index).toString());
+                funcFParamNodes.get(index + 1).print();
+                index++;
+            }
         }
+
         IOUtils.write(Parser.nodeType.get(NodeType.FuncFParams));
     }
-
-
-
-
-
-
-
-
-
-
-
-
 }

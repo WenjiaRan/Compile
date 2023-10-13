@@ -6,11 +6,11 @@ import utils.IOUtils;
 
 public class MainFuncDefNode {
     // MainFuncDef → 'int' 'main' '(' ')' Block
-    private Token intToken;
-    private Token mainToken;
-    private Token leftBrackToken;
-    private Token rightBrackToken;
-    private BlockNode blockNode;
+    public Token intToken;
+    public Token mainToken;
+    public Token leftBrackToken;
+    public Token rightBrackToken;
+    public BlockNode blockNode;
 
     public MainFuncDefNode(Token intToken, Token mainToken, Token leftBrackToken, Token rightBrackToken, BlockNode blockNode) {
         this.intToken = intToken;

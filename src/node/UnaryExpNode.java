@@ -17,13 +17,13 @@ public class UnaryExpNode {
     // First(UnaryOp) ={ '+', '-', '!'}
     // 有回溯
     // UnaryExp → Number |'(' Exp ')' | Ident  ( '(' [FuncRParams] ')'| {'[' Exp ']'})| UnaryOp UnaryExp
-    private PrimaryExpNode primaryExpNode = null;
-    private Token ident = null;
-    private Token leftParentToken = null;
-    private FuncRParamsNode funcRParamsNode = null;
-    private Token rightParentToken = null;
-    private UnaryOpNode unaryOpNode = null;
-    private UnaryExpNode unaryExpNode = null;
+    public PrimaryExpNode primaryExpNode = null;
+    public Token ident = null;
+    public Token leftParentToken = null;
+    public FuncRParamsNode funcRParamsNode = null;
+    public Token rightParentToken = null;
+    public UnaryOpNode unaryOpNode = null;
+    public UnaryExpNode unaryExpNode = null;
 
     public UnaryExpNode(PrimaryExpNode primaryExpNode) {
         this.primaryExpNode = primaryExpNode;

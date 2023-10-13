@@ -5,7 +5,7 @@ import utils.IOUtils;
 
 public class ConstExpNode {
     // ConstExp → AddExp
-    private AddExpNode addExpNode;
+    public AddExpNode addExpNode;
 
     public ConstExpNode(AddExpNode addExpNode) {
         this.addExpNode = addExpNode;

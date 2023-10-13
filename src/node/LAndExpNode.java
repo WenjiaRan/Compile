@@ -7,9 +7,9 @@ import utils.IOUtils;
 public class LAndExpNode {
     // LAndExp → EqExp | LAndExp '&&' EqExp
     // LAndExp → EqExp['&&' LAndExp]
-    private EqExpNode eqExpNode;
-    private Token token;
-    private LAndExpNode lAndExpNode;
+    public EqExpNode eqExpNode;
+    public Token token;
+    public LAndExpNode lAndExpNode;
 
     public LAndExpNode(EqExpNode eqExpNode, Token token, LAndExpNode lAndExpNode) {
         this.eqExpNode = eqExpNode;

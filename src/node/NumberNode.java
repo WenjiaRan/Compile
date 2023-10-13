@@ -22,7 +22,5 @@ public class NumberNode {
         IOUtils.write(Parser.nodeType.get(NodeType.Number));
     }
 
-    public String getStr() {
-        return token.getContent();
-    }
+
 }

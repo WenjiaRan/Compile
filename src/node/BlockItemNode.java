@@ -1,40 +1,18 @@
 package node;
 
 public class BlockItemNode {
-    // BlockItem → Decl | Stmt
-    private  DeclNode declNode;
-    private StmtNode stmtNode;
+    public DeclNode declNode = null;
+    public StmtNode stmtNode = null;
 
-    public BlockItemNode(DeclNode declNode) {
+    public BlockItemNode(DeclNode declNode, StmtNode stmtNode) {
         this.declNode = declNode;
-    }
-
-    public BlockItemNode(StmtNode stmtNode) {
         this.stmtNode = stmtNode;
     }
 
-    public void print(){
-        if(declNode != null){
+    public void print() {
+        if (declNode != null) {
             declNode.print();
-        }
-        else {
+        } else {
             stmtNode.print();
-        }
-
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        }}
 }
