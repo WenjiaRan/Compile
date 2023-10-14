@@ -11,10 +11,10 @@ SEMICN ;
 IDENFR c
 <LVal>
 ASSIGN =
-SEMICN ;
+GETINTTK getint
 LPARENT (
 RPARENT )
-GETINTTK getint
+SEMICN ;
 <Stmt>
 PRINTFTK printf
 LPARENT (
@@ -30,7 +30,7 @@ IDENFR c
 RPARENT )
 SEMICN ;
 <Stmt>
-SEMICN ;
+RETURNTK return
 IDENFR c
 <LVal>
 <PrimaryExp>
@@ -38,7 +38,7 @@ IDENFR c
 <MulExp>
 <AddExp>
 <Exp>
-RETURNTK return
+SEMICN ;
 <Stmt>
 RBRACE }
 <Block>

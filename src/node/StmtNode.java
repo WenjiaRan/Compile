@@ -156,14 +156,14 @@ public class StmtNode {
         this.semicolonToken = semicolonToken;
     }
 
-    public StmtNode(StmtType stmtType, ExpNode expNode, Token semicolonToken, Token returnToken) {
+    public StmtNode(StmtType stmtType, Token returnToken,ExpNode expNode, Token semicolonToken) {
         this.stmtType = stmtType;
         this.expNode = expNode;
         this.semicolonToken = semicolonToken;
         this.returnToken = returnToken;
     }
 
-    public StmtNode(StmtType stmtType, LValNode lValNode, Token assginToken, Token semicolonToken, Token leftParenToken, Token rightParenToken, Token getintToken) {
+    public StmtNode(StmtType stmtType, LValNode lValNode, Token assginToken, Token getintToken, Token leftParenToken, Token rightParenToken,Token semicolonToken ) {
         this.stmtType = stmtType;
         this.lValNode = lValNode;
         this.assginToken = assginToken;

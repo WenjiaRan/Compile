@@ -405,7 +405,7 @@ public class Parser {
                 expNode=Exp();
             }
             Token semicnToken=match(TokenType.SEMICN);
-            return new StmtNode(StmtNode.StmtType.Return,expNode,returnToken,semicnToken);
+            return new StmtNode(StmtNode.StmtType.Return,returnToken,expNode,semicnToken);
         }
         // 'printf''('FormatString{','Exp}')'';'
         else if(tokens.get(index).content.equals("printf")){
