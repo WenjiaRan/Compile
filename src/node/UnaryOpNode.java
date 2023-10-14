@@ -9,6 +9,9 @@ public class UnaryOpNode {
 
     Token token;
 
+    public UnaryOpNode(Token token) {
+        this.token = token;
+    }
 
     public void print() {
         IOUtils.write(token.toString());

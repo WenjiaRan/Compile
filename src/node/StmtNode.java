@@ -9,6 +9,41 @@ import java.util.List;
 
 
 public class StmtNode {
+
+
+
+    public StmtNode stmtNode;
+
+    public StmtNode(StmtType stmtType,Token forToken, Token lParentToken, List<ForStmtNode> forStmtNodeList, List<Token> semiTokenList, CondNode condNode, Token rParentToken, StmtNode stmtNode) {
+        this.forToken = forToken;
+        this.leftParenToken=lParentToken;
+        this.forStmtNodes=forStmtNodeList;
+        this.condNode=condNode;
+        this.rightParenToken=rParentToken;
+        this.stmtNode=stmtNode;
+        this.semicolonTokens=semiTokenList;
+        this.stmtType=stmtType;
+    }
+
+    public StmtNode(StmtType printf, Token printfToken, Token lParentToken,
+                    Token formatStringNode, List<Token> commaTokenList,
+                    List<ExpNode> expNodeList, Token rightParenToken,Token semiToken) {
+        this.stmtType=printf;
+        this.printfToken=printfToken;
+        this.leftParenToken=lParentToken;
+        this.formatString=formatStringNode;
+        this.commaTokens = commaTokenList;
+        this.expNodes=expNodeList;
+        this.semicolonToken=semiToken;
+        this.rightParenToken=rightParenToken;
+    }
+
+    public StmtNode(StmtType exp, ExpNode expNode, Token semiToken) {
+        this.stmtType=exp;
+        this.expNode=expNode;
+        this.semicolonToken =semiToken;
+    }
+
     // Stmt → LVal '=' Exp ';'
     // | [Exp] ';'
     // | Block
@@ -54,7 +89,9 @@ public class StmtNode {
     public Token commaToken;
     public List<Token> commaTokens;
 
-
+    public StmtNode(BlockNode block) {
+        this.blockNode=block;
+    }
 
     public StmtNode(StmtType stmtType, List<ExpNode> expNodes, Token semicolonToken, Token leftParenToken, Token rightParenToken, Token printfToken, Token formatString, List<Token> commaTokens) {
         this.stmtType = stmtType;
@@ -66,7 +103,14 @@ public class StmtNode {
         this.formatString = formatString;
         this.commaTokens=commaTokens;
     }
-
+    public StmtNode(Token ifToken, Token lParentToken, CondNode condNode, Token rParentToken, List<StmtNode> stmtNodeList, Token elseToken) {
+        this.ifToken = ifToken;
+        this.condNode = condNode;
+        this.leftParenToken=lParentToken;
+        this.rightParenToken=rParentToken;
+        this.stmtNodes=stmtNodeList;
+        this.elseToken=elseToken;
+    }
     public StmtNode(StmtType stmtType, LValNode lValNode, Token assginToken, ExpNode expNode, Token semicolonToken) {
         this.stmtType = stmtType;
         this.lValNode = lValNode;

@@ -1,9 +1,14 @@
 
 import config.Config;
+import frontend.Parser;
 import frontend.Lexer;
+
+import token.Token;
 import utils.IOUtils;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class Compiler {
@@ -13,7 +18,13 @@ public class Compiler {
         if (Config.lexer) {
             Lexer.getInstance().printLexAns();
         }
-
+        Parser parser = new Parser(Lexer.getInstance().getTokens());
+        parser.analyze();
+//        Parser.getInstance().setTokens(Lexer.getInstance().getTokens());
+//        Parser.getInstance().analyze();
+        if (Config.parser) {
+            parser.printParseAns();
+        }
     }
 }
 

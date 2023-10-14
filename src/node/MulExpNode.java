@@ -7,23 +7,24 @@ import java.util.List;
 public class MulExpNode {
     //MulExp → UnaryExp | MulExp ('*' | '/' | '%') UnaryExp
     // 消除左递归
-    // MulExp → UnaryExp {('*' | '/' | '%') UnaryExp}
-    public List<UnaryExpNode> unaryExpNodes;
-    public List<Token> operations;
+    // MulExp → UnaryExp [('*' | '/' | '%') MulExp]
+    public UnaryExpNode unaryExpNode;
+    public Token operation;
+    public MulExpNode mulExpNode;
 
-    public MulExpNode(List<UnaryExpNode> unaryExpNodes,List<Token> operations) {
-        this.operations = operations;
-        this.unaryExpNodes = unaryExpNodes;
+    public MulExpNode(UnaryExpNode unaryExpNode, Token operation, MulExpNode mulExpNode) {
+        this.unaryExpNode = unaryExpNode;
+        this.operation = operation;
+        this.mulExpNode = mulExpNode;
     }
 
     public void print() {
-        for (int i=0;i< unaryExpNodes.size();i++) {
-            unaryExpNodes.get(i).print();
-            if(i<operations.size()) {
-                IOUtils.write(operations.get(i).toString());
-            }
-        }
+        unaryExpNode.print();
         IOUtils.write(Parser.nodeType.get(NodeType.MulExp));
+        if(operation!=null){
+            IOUtils.write(operation.toString());
+            mulExpNode.print();
+        }
     }
 }
 
