@@ -1,5 +1,6 @@
 package node;
 
+import frontend.Parser;
 import token.Token;
 import utils.IOUtils;
 
@@ -36,5 +37,6 @@ public class ConstDefNode {
 
         IOUtils.write(equalToken.toString());
         constInitValNode.print();
+        IOUtils.write(Parser.nodeType.get(NodeType.ConstDef));
     }
 }

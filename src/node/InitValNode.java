@@ -34,7 +34,7 @@ public class InitValNode {
                 initValNodes.get(0).print();
 
                 int index = 0;
-                while (index <= commaTokens.size()) {
+                while (index < commaTokens.size()) {
                     IOUtils.write(commaTokens.get(index).toString());
                     initValNodes.get(index+1).print();
                     index++;

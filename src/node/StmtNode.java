@@ -241,9 +241,10 @@ public class StmtNode {
     }
 
     public void printFor() {
+        //'for' '(' [ForStmt] ';' [Cond] ';' [ForStmt] ')' Stmt
         IOUtils.write(forToken.toString());
         IOUtils.write(leftParenToken.toString());
-        if (forStmtNodes.size()>0){
+        if (forStmtNodes.get(0)!=null){
             forStmtNodes.get(0).print();
         }
         IOUtils.write(semicolonTokens.get(0).toString());
@@ -251,11 +252,11 @@ public class StmtNode {
             condNode.print();
         }
         IOUtils.write(semicolonTokens.get(1).toString());
-        if (forStmtNodes.size()>1){
+        if (forStmtNodes.get(1)!=null){
             forStmtNodes.get(1).print();
         }
         IOUtils.write(rightParenToken.toString());
-        stmtNodes.get(0).print();
+        stmtNode.print();
     }
 
     public void printBreak() {
@@ -264,7 +265,7 @@ public class StmtNode {
     }
 
     public void printContinue() {
-        IOUtils.write(continueToken.toString());
+        IOUtils.write(breakToken.toString());
         IOUtils.write(semicolonToken.toString());
     }
 

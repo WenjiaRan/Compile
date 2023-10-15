@@ -77,7 +77,10 @@ public class Parser {
         if (tokens.get(index).getType() == tokenType) {
             return tokens.get(index++);
         } else {
-            throw new RuntimeException("Syntax error: " + tokens.get(index).toString() + " at line " + tokens.get(index).getLineNumber());
+            throw new RuntimeException("Syntax error: " + tokens.get(index).toString()
+                    + "should be "+tokenType+"\n at line " + tokens.get(index).getLineNumber()+ "\n "
+                    + tokens.get(index-2).toString()+tokens.get(index-1).toString() +tokens.get(index).toString() +
+                    tokens.get(index+1).toString()+tokens.get(index+2).toString()  );
         }
     }
     public CompUnitNode CompUnit() {
@@ -214,12 +217,12 @@ public class Parser {
         InitValNode initValNode;
 
         identToken=match(TokenType.IDENFR);
-        while(tokens.get(index).content.equals('[')){
+        while(tokens.get(index).content.equals("[")){
             leftBracks.add(match(TokenType.LBRACK));
             constExpNodeList.add(ConstExp());
             rightBracks.add(match(TokenType.RBRACK));
         }
-        if(!tokens.get(index).content.equals('=')){
+        if(!tokens.get(index).content.equals("=")){
             return new VarDefNode(identToken,leftBracks,constExpNodeList,rightBracks,null,null);
         }
         else {
@@ -237,11 +240,11 @@ public class Parser {
         List <InitValNode > initValNodeList = new ArrayList<>();
         List <Token> commaList = new ArrayList<>();
 
-        if (tokens.get(index).content.equals('{')){
+        if (tokens.get(index).content.equals("{")){
             leftbrack=match(TokenType.LBRACE);
-            if(!tokens.get(index).content.equals('}')) {
+            if(!tokens.get(index).content.equals("}")) {
                 initValNodeList.add(InitVal());
-                while(!tokens.get(index).content.equals('}')){
+                while(!tokens.get(index).content.equals("}")){
                     commaList.add(match(TokenType.COMMA));
                     initValNodeList.add(InitVal());
                 }
@@ -266,7 +269,7 @@ public class Parser {
         funcTypeNode=FuncType();
         ident=match(TokenType.IDENFR);
         leftParent=match(TokenType.LPARENT);
-        if(!tokens.get(index).content.equals(')')){
+        if(!tokens.get(index).content.equals(")")){
             funcFParamsNode=FuncFParams();
         }
         rightParent=match(TokenType.RPARENT);
@@ -338,6 +341,10 @@ public class Parser {
         return new BlockItemNode(Stmt());
     }
     public StmtNode Stmt(){
+        if(tokens.get(index).content.equals("break")){
+            int x=2;
+            x=x+3;
+        }
         //Block
         if (tokens.get(index).content.equals("{")){
             return new StmtNode(StmtNode.StmtType.Block,Block());
@@ -369,6 +376,9 @@ public class Parser {
                 if(!tokens.get(index).content.equals(";")){
                     forStmtNodeList.add(ForStmt());
                 }
+                else{
+                    forStmtNodeList.add(null);
+                }
                 semiTokenList.add(match(TokenType.SEMICN));
                 if(!tokens.get(index).content.equals(";")){
                     condNode=Cond();
@@ -376,6 +386,9 @@ public class Parser {
                 semiTokenList.add(match(TokenType.SEMICN));
                 if(!tokens.get(index).content.equals(")")){
                     forStmtNodeList.add(ForStmt());
+                }
+                else{
+                    forStmtNodeList.add(null);
                 }
             }
 
@@ -386,13 +399,13 @@ public class Parser {
         }
         //'break' ';' | 'continue' ';'
         else if(tokens.get(index).content.equals("break")&&
-                tokens.get(index).content.equals(";")){
+                tokens.get(index+1).content.equals(";")){
             Token breakToken=match(TokenType.BREAKTK);
             Token semiToken=match(TokenType.SEMICN  );
             return new StmtNode(StmtNode.StmtType.Break,breakToken,semiToken);
         }
         else if(tokens.get(index).content.equals("continue")&&
-                tokens.get(index).content.equals(";")){
+                tokens.get(index+1).content.equals(";")){
             Token breakToken=match(TokenType.CONTINUETK);
             Token semiToken=match(TokenType.SEMICN  );
             return new StmtNode(StmtNode.StmtType.Continue,breakToken,semiToken);
@@ -487,6 +500,10 @@ public class Parser {
     }
     public LValNode LVal(){
         //LVal → Ident {'[' Exp ']'}
+        if(tokens.get(index).content.equals("break")){
+            int x=3+3;
+            x=2+x;
+        }
         Token identToken=match(TokenType.IDENFR);
         List<Token> lBrackList = new ArrayList<>();
         List<Token> rBrackList = new ArrayList<>();
