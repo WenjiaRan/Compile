@@ -280,17 +280,22 @@ public class Parser {
         FuncTypeNode funcTypeNode;
         Token ident;
         Token leftParent;
-        Token rightParent;
+        Token rightParent = null;;
         FuncFParamsNode funcFParamsNode=null;
         BlockNode blockNode;
 
         funcTypeNode=FuncType();
         ident=match(TokenType.IDENFR);
         leftParent=match(TokenType.LPARENT);
-        if(!tokens.get(index).content.equals(")")){
-            funcFParamsNode=FuncFParams();
+        if(!tokens.get(index).content.equals("int")&&!tokens.get(index).content.equals(")")) {// 有语法错误, 没有')'
+            ErrorHandler.instance.addError(new Error(tokens.get(index).lineNumber, Error.ErrorType.j));
         }
-        rightParent=match(TokenType.RPARENT);
+        else{
+            if(!tokens.get(index).content.equals(")")){
+                funcFParamsNode=FuncFParams();
+            }
+            rightParent=match(TokenType.RPARENT);
+        }
         blockNode=Block();
         return new FuncDefNode(funcTypeNode,ident,leftParent,funcFParamsNode,rightParent,blockNode);
     }
@@ -556,24 +561,33 @@ public class Parser {
         switch(tokens.get(index).content) {
             case "+": case "-": case "!":
                 return new UnaryExpNode(UnaryOp(),UnaryExp());
-
         }
         //Ident '(' [FuncRParams] ')'
         if(tokens.get(index).type==TokenType.IDENFR&&
                 tokens.get(index+1).content.equals("(")){
+
             Token identToken=match(TokenType.IDENFR);
             Token lParentToken=match(TokenType.LPARENT);
+            Token rParentToken = null;
             FuncRParamsNode funcRParamsNode=null;
             if(!tokens.get(index).content.equals(")")){
-                funcRParamsNode=FuncRParams();
+                if(tokens.get(index).type!=TokenType.IDENFR&&tokens.get(index).type!=TokenType.INTCON){
+                    ErrorHandler.instance.addError(new Error(tokens.get(index).lineNumber, Error.ErrorType.j));
+                }
+                else
+                {
+                    funcRParamsNode=FuncRParams();
+                    rParentToken=match(TokenType.RPARENT);
+                }
+            }else{
+                rParentToken=match(TokenType.RPARENT);
             }
-            Token rParentToken=match(TokenType.RPARENT);
+
             return new UnaryExpNode(identToken,lParentToken,funcRParamsNode,rParentToken);
         }
 
         return new UnaryExpNode(PrimaryExp());
-
-        }
+    }
     public UnaryOpNode UnaryOp(){
         //UnaryOp → '+' | '−' | '!'
         Token token=null;
