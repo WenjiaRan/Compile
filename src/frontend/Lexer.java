@@ -1,5 +1,7 @@
 package frontend;
 
+import error.Error;
+import error.ErrorHandler;
 import token.Token;
 import token.TokenType;
 import utils.IOUtils;
@@ -103,9 +105,9 @@ public class Lexer {
             identifier.append(source.charAt(i));
             i++;
         }
-
+        //获取指定 key 对应对 value，如果找不到 key ，则返回设置的默认值。
         tokens.add(new Token(keywords.getOrDefault(identifier.toString(), TokenType.IDENFR), line, identifier.toString()));
-
+        //返回这个token的最后一个索引,至于将索引加到下一个token的开头,是analyze()中while里i++的事情
         return i - 1;
     }
 
@@ -137,14 +139,19 @@ public class Lexer {
 
             if (currentChar == '\n' || currentChar == 37) {
                 // Handle invalid characters and format chars as in the original code
-                // TODO: Implement any error handling or logging you may need
+                if(currentChar==37&&source.charAt(i+1)!='d'){
+                    ErrorHandler.instance.addError(new Error(line, Error.ErrorType.a));
+                } else if (currentChar == '\n') {
+                    ErrorHandler.instance.addError(new Error(line, Error.ErrorType.a));
+                }
             }
-
-            // Handle escape sequences (assuming only "\n" is valid as in the original)
-            if (currentChar == 92 && (i + 1 == source.length() || source.charAt(i + 1) != 'n')) {
-                // TODO: Handle the error as in the original code
+            else if (currentChar == 32 || currentChar == 33 || (currentChar >= 40 && currentChar <= 126)){
+                // Handle escape sequences (assuming only "\n" is valid as in the original)
+                if (currentChar == 92 && (i + 1 == source.length() || source.charAt(i + 1) != 'n')) {
+                    ErrorHandler.instance.addError(new Error(line, Error.ErrorType.a));
+                }
             }
-
+            else ErrorHandler.instance.addError(new Error(line, Error.ErrorType.a));
             s.append(currentChar);
             i++;
         }
@@ -155,8 +162,9 @@ public class Lexer {
 
     public int handleCommentOrDivide(String source, int startIndex, char nextChar) {
         int i = startIndex;
-
+        // 单行注释
         if (nextChar == '/') {
+            // 从i+2之后找\n的索引
             i = source.indexOf('\n', i + 2);
             if (i == -1) {
                 i = source.length() - 1;
@@ -264,7 +272,7 @@ public class Lexer {
                 tokens.add(new Token(TokenType.RBRACE, line, "}"));
                 break;
             default:
-                // TODO: Handle unexpected characters if necessary
+                // TODO: Handle unexpected characters if necessary.upd: seems no need to handle
                 break;
         }
 

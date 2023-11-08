@@ -1,5 +1,7 @@
 package frontend;
 
+import error.Error;
+import error.ErrorHandler;
 import node.*;
 import token.Token;
 import token.TokenType;
@@ -13,50 +15,48 @@ import static node.NodeType.*;
 
 
 public class Parser {
+    public static final Parser instance = new Parser();
     public List<Token> tokens;
     public int index =0;// token的索引
     public CompUnitNode compUnitNode;
-    public static Map<NodeType, String> nodeType;
+//    public static Map<NodeType, String> nodeType;
     public Token now;
-    public Parser(List<Token> tokens) {
-        this.tokens = tokens;
-        nodeType = new HashMap<>();
-        nodeType.put(NodeType.CompUnit, "<CompUnit>\n");
-        nodeType.put(NodeType.Decl, "<Decl>\n");
-        nodeType.put(NodeType.ConstDecl, "<ConstDecl>\n");
-        nodeType.put(BType, "<BType>\n");
-        nodeType.put(NodeType.ConstDef, "<ConstDef>\n");
-        nodeType.put(NodeType.ConstInitVal, "<ConstInitVal>\n");
-        nodeType.put(NodeType.VarDecl, "<VarDecl>\n");
-        nodeType.put(NodeType.VarDef, "<VarDef>\n");
-        nodeType.put(NodeType.InitVal, "<InitVal>\n");
-        nodeType.put(NodeType.FuncDef, "<FuncDef>\n");
-        nodeType.put(NodeType.MainFuncDef, "<MainFuncDef>\n");
-        nodeType.put(NodeType.FuncType, "<FuncType>\n");
-        nodeType.put(NodeType.FuncFParams, "<FuncFParams>\n");
-        nodeType.put(NodeType.FuncFParam, "<FuncFParam>\n");
-        nodeType.put(NodeType.Block, "<Block>\n");
-        nodeType.put(NodeType.BlockItem, "<BlockItem>\n");
-        nodeType.put(NodeType.Stmt, "<Stmt>\n");
-        nodeType.put(NodeType.Exp, "<Exp>\n");
-        nodeType.put(NodeType.Cond, "<Cond>\n");
-        nodeType.put(NodeType.LVal, "<LVal>\n");
-        nodeType.put(NodeType.PrimaryExp, "<PrimaryExp>\n");
-        nodeType.put(NodeType.Number, "<Number>\n");
-        nodeType.put(NodeType.UnaryExp, "<UnaryExp>\n");
-        nodeType.put(NodeType.UnaryOp, "<UnaryOp>\n");
-        nodeType.put(NodeType.FuncRParams, "<FuncRParams>\n");
-        nodeType.put(NodeType.MulExp, "<MulExp>\n");
-        nodeType.put(NodeType.AddExp, "<AddExp>\n");
-        nodeType.put(NodeType.RelExp, "<RelExp>\n");
-        nodeType.put(NodeType.EqExp, "<EqExp>\n");
-        nodeType.put(NodeType.LAndExp, "<LAndExp>\n");
-        nodeType.put(NodeType.LOrExp, "<LOrExp>\n");
-        nodeType.put(NodeType.ConstExp, "<ConstExp>\n");
-        nodeType.put(NodeType.ForStmt, "<ForStmt>\n");
-    }
+    public static Map<NodeType, String> nodeType = new HashMap<NodeType, String>() {{
+        put(NodeType.CompUnit, "<CompUnit>\n");
+        put(NodeType.Decl, "<Decl>\n");
+        put(NodeType.ConstDecl, "<ConstDecl>\n");
+        put(NodeType.BType, "<BType>\n");
+        put(NodeType.ConstDef, "<ConstDef>\n");
+        put(NodeType.ConstInitVal, "<ConstInitVal>\n");
+        put(NodeType.VarDecl, "<VarDecl>\n");
+        put(NodeType.VarDef, "<VarDef>\n");
+        put(NodeType.InitVal, "<InitVal>\n");
+        put(NodeType.FuncDef, "<FuncDef>\n");
+        put(NodeType.MainFuncDef, "<MainFuncDef>\n");
+        put(NodeType.FuncType, "<FuncType>\n");
+        put(NodeType.FuncFParams, "<FuncFParams>\n");
+        put(NodeType.FuncFParam, "<FuncFParam>\n");
+        put(NodeType.Block, "<Block>\n");
+        put(NodeType.BlockItem, "<BlockItem>\n");
+        put(NodeType.Stmt, "<Stmt>\n");
+        put(NodeType.Exp, "<Exp>\n");
+        put(NodeType.Cond, "<Cond>\n");
+        put(NodeType.LVal, "<LVal>\n");
+        put(NodeType.PrimaryExp, "<PrimaryExp>\n");
+        put(NodeType.Number, "<Number>\n");
+        put(NodeType.UnaryExp, "<UnaryExp>\n");
+        put(NodeType.UnaryOp, "<UnaryOp>\n");
+        put(NodeType.FuncRParams, "<FuncRParams>\n");
+        put(NodeType.MulExp, "<MulExp>\n");
+        put(NodeType.AddExp, "<AddExp>\n");
+        put(NodeType.RelExp, "<RelExp>\n");
+        put(NodeType.EqExp, "<EqExp>\n");
+        put(NodeType.LAndExp, "<LAndExp>\n");
+        put(NodeType.LOrExp, "<LOrExp>\n");
+        put(NodeType.ConstExp, "<ConstExp>\n");
+    }};
 
-    public static Lexer getInstance() {
+    public static Parser getInstance() {
         return instance;
     }
 
@@ -77,10 +77,28 @@ public class Parser {
         if (tokens.get(index).getType() == tokenType) {
             return tokens.get(index++);
         } else {
-            throw new RuntimeException("Syntax error: " + tokens.get(index).toString()
-                    + "should be "+tokenType+"\n at line " + tokens.get(index).getLineNumber()+ "\n "
-                    + tokens.get(index-2).toString()+tokens.get(index-1).toString() +tokens.get(index).toString() +
-                    tokens.get(index+1).toString()+tokens.get(index+2).toString()  );
+//            throw new RuntimeException("Syntax error: " + tokens.get(index).toString()
+//                    + "should be "+tokenType+"\n at line " + tokens.get(index).getLineNumber()+ "\n "
+//                    + tokens.get(index-2).toString()+tokens.get(index-1).toString() +tokens.get(index).toString() +
+//                    tokens.get(index+1).toString()+tokens.get(index+2).toString()  );
+            // 弱报错, 上面被注释的是强报错, 但注意上面的索引可能越界! 谨慎使用
+//            throw new RuntimeException("Syntax error: " + tokens.get(index).toString()
+//                    + "should be "+tokenType+"\n at line " + tokens.get(index).getLineNumber()+ "\n ");
+
+            switch (tokenType){
+                case RBRACK:
+                    //TODO: why index-1?
+                    ErrorHandler.instance.addError(new Error(tokens.get(index-1).lineNumber, Error.ErrorType.k));
+                    return new Token(TokenType.RBRACK,tokens.get(index-1).lineNumber,"]");
+                case SEMICN:
+                    ErrorHandler.instance.addError(new Error(tokens.get(index-1).lineNumber, Error.ErrorType.i));
+                    return new Token(TokenType.SEMICN, tokens.get(index - 1).lineNumber, ";");
+                case RPARENT:
+                    ErrorHandler.instance.addError(new Error(tokens.get(index-1).lineNumber, Error.ErrorType.j));
+                    return new Token(TokenType.RPARENT, tokens.get(index-1).lineNumber, ")");
+                default:
+                    throw new RuntimeException("Syntax error at line " + now.getLineNumber() + ": " + now.getContent() + " is not " + tokenType);
+            }
         }
     }
     public CompUnitNode CompUnit() {
@@ -262,17 +280,24 @@ public class Parser {
         FuncTypeNode funcTypeNode;
         Token ident;
         Token leftParent;
-        Token rightParent;
+        Token rightParent = null;
         FuncFParamsNode funcFParamsNode=null;
         BlockNode blockNode;
 
         funcTypeNode=FuncType();
         ident=match(TokenType.IDENFR);
         leftParent=match(TokenType.LPARENT);
-        if(!tokens.get(index).content.equals(")")){
-            funcFParamsNode=FuncFParams();
+        if(!tokens.get(index).content.equals("int")&&!tokens.get(index).content.equals(")")){// 有语法错误, 没有')'
+            ErrorHandler.instance.addError(new Error(tokens.get(index).lineNumber, Error.ErrorType.j));
         }
-        rightParent=match(TokenType.RPARENT);
+        else{
+            if(!tokens.get(index).content.equals(")")){
+                funcFParamsNode=FuncFParams();
+            }
+            rightParent=match(TokenType.RPARENT);
+        }
+
+
         blockNode=Block();
         return new FuncDefNode(funcTypeNode,ident,leftParent,funcFParamsNode,rightParent,blockNode);
     }
@@ -543,13 +568,22 @@ public class Parser {
         //Ident '(' [FuncRParams] ')'
         if(tokens.get(index).type==TokenType.IDENFR&&
                 tokens.get(index+1).content.equals("(")){
+
             Token identToken=match(TokenType.IDENFR);
             Token lParentToken=match(TokenType.LPARENT);
+            Token rParentToken = null;
             FuncRParamsNode funcRParamsNode=null;
             if(!tokens.get(index).content.equals(")")){
-                funcRParamsNode=FuncRParams();
+                if(tokens.get(index).type!=TokenType.IDENFR){
+                    ErrorHandler.instance.addError(new Error(tokens.get(index).lineNumber, Error.ErrorType.j));
+                }
+                else
+                {
+                    funcRParamsNode=FuncRParams();
+                    rParentToken=match(TokenType.RPARENT);
+                }
             }
-            Token rParentToken=match(TokenType.RPARENT);
+
             return new UnaryExpNode(identToken,lParentToken,funcRParamsNode,rParentToken);
         }
 

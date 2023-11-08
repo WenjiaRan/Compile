@@ -1,5 +1,6 @@
 
 import config.Config;
+import error.ErrorHandler;
 import frontend.Parser;
 import frontend.Lexer;
 
@@ -18,12 +19,16 @@ public class Compiler {
         if (Config.lexer) {
             Lexer.getInstance().printLexAns();
         }
-        Parser parser = new Parser(Lexer.getInstance().getTokens());
-        parser.analyze();
+        Parser.getInstance().setTokens(Lexer.getInstance().getTokens());
+        Parser.getInstance().analyze();
 //        Parser.getInstance().setTokens(Lexer.getInstance().getTokens());
 //        Parser.getInstance().analyze();
         if (Config.parser) {
-            parser.printParseAns();
+            Parser.instance.printParseAns();
+        }
+        ErrorHandler.instance.compUnitError(Parser.getInstance().compUnitNode);
+        if (Config.error) {
+            ErrorHandler.instance.printErrors();
         }
     }
 }
