@@ -26,10 +26,10 @@ public class Compiler {
         if (Config.parser) {
             Parser.instance.printParseAns();
         }
-        ErrorHandler.instance.compUnitError(Parser.getInstance().compUnitNode);
-        if (Config.error) {
-            ErrorHandler.instance.printErrors();
-        }
+//        ErrorHandler.instance.compUnitError(Parser.getInstance().compUnitNode);
+//        if (Config.error) {
+//            ErrorHandler.instance.printErrors();
+//        }
     }
 }
 

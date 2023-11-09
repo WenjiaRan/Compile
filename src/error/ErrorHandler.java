@@ -17,6 +17,10 @@ public class ErrorHandler {
     public static int loopCount;
     public List<Triple<Map<String, Symbol>, Boolean, ReturnType>>
             symbolTables = new ArrayList<>(); // 符号表栈 + 作用域
+//    void f1(){
+//        return 0;
+//    }
+    // 比如上面ErrorHandler执行到return语句时,目前的符号表的Third就是VOID!
     //Second表示这个基本块是否是函数的最外层基本块
     //Third表示如果是函数的基本块，那么函数是否有返回值
     public List<Error> errors = new ArrayList<>();
@@ -25,6 +29,9 @@ public class ErrorHandler {
         symbolTables.add(new Triple<>(new HashMap<>(), isFunc, funcType));
     }
 
+    public ReturnType findCurFunc() {//在函数体内时, 获得符号表关于该函数的内容
+        return symbolTables.get(symbolTables.size()-1).third;
+    }
     public void removeSymbolTable() {
         symbolTables.remove(symbolTables.size() - 1);
     }
@@ -280,6 +287,12 @@ public class ErrorHandler {
             }
         } else if (stmtNode.stmtType == StmtNode.StmtType.Return) {
             if (stmtNode.expNode !=null) {
+                // 函数是void, 但是return了值
+                if (findCurFunc() == ReturnType.VOID) {
+                    ErrorHandler.instance.addError(new Error(
+                            stmtNode.returnToken.lineNumber, Error.ErrorType.f
+                    ));
+                }
                 expError(stmtNode.expNode);
             }
         } else if (stmtNode.stmtType == StmtNode.StmtType.LValAssignExp) {
@@ -440,9 +453,37 @@ public class ErrorHandler {
                 // 实参错误检查
                 funcRParamsError(unaryExpNode.funcRParamsNode);
                 // 维度检查
+                int flag=0;
                 for (ExpNode expNode : unaryExpNode.funcRParamsNode.expNodes){
+                    FuncParam funcParam = getFuncParamInExp(expNode);
+                    if (funcParam.name == null) {
+                        if(funcParam.dimension!=funcSymbol.funcParams.get(flag).dimension){
+                            ErrorHandler.instance.addError(new Error(
+                                    unaryExpNode.ident.lineNumber, Error.ErrorType.e));
 
+
+                    } }else {
+                        symbol = findIfDeclared(funcParam.name);
+                        // 如果是变量
+                        if (symbol instanceof ArraySymbol) {
+                            if(((ArraySymbol) symbol).dimension - funcParam.dimension
+                            !=funcSymbol.funcParams.get(flag).dimension){
+                                ErrorHandler.instance.addError(new Error(
+                                        unaryExpNode.ident.lineNumber, Error.ErrorType.e));
+                            }
+                            // 如果是函数
+                        } else if (symbol instanceof FuncSymbol) {
+                            if(((FuncSymbol) symbol).type == ReturnType.VOID){
+                                ErrorHandler.instance.addError(new Error(
+                                        unaryExpNode.ident.lineNumber, Error.ErrorType.e));
+                            } else if (0 != funcSymbol.funcParams.get(flag).dimension) {
+                                ErrorHandler.instance.addError(new Error(
+                                        unaryExpNode.ident.lineNumber, Error.ErrorType.e));
+                            }
+                        }}
+                    flag++;
                 }
+
             }
         }
     }
@@ -464,6 +505,10 @@ public class ErrorHandler {
         } else if (unaryExpNode.ident != null) {
             Symbol symbol=findIfDeclared(unaryExpNode.ident.content);
             if(symbol instanceof FuncSymbol){
+//                FuncSymbol funcSymbol=(FuncSymbol)symbol;
+//                if (funcSymbol.type == ReturnType.VOID) {
+//
+//                }
                 FuncParam funcParam=new FuncParam(unaryExpNode.ident.content, 0);
                 return  funcParam;
             }

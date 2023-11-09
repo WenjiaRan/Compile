@@ -97,7 +97,7 @@ public class Parser {
                     ErrorHandler.instance.addError(new Error(tokens.get(index-1).lineNumber, Error.ErrorType.j));
                     return new Token(TokenType.RPARENT, tokens.get(index-1).lineNumber, ")");
                 default:
-                    throw new RuntimeException("Syntax error at line " + now.getLineNumber() + ": " + now.getContent() + " is not " + tokenType);
+                    throw new RuntimeException("Syntax error at line " + tokens.get(index).getLineNumber() + ": " + now.getContent() + " is not " + tokenType);
             }
         }
     }

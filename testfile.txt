@@ -1,3 +1,10 @@
+int main()
+{
+    int i;
+  for(i=0; i<5; ++i) {
 
+  }
 
-//TODO:修改错误. http://10.212.30.38:8201/assignment/221/judge/72/detail
+  return 0;
+}
+//TODO: 语法分析都不过
