@@ -18,8 +18,8 @@ public class Config {
      * stages of compilation
      */
     public static boolean lexer = false;
-    public static boolean parser = true;
-    public static boolean error = false;
+    public static boolean parser = false;
+    public static boolean error = true;
     public static boolean ir = false;
     public static boolean mips = false;
 

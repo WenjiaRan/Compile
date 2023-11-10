@@ -54,6 +54,7 @@ public class Parser {
         put(NodeType.LAndExp, "<LAndExp>\n");
         put(NodeType.LOrExp, "<LOrExp>\n");
         put(NodeType.ConstExp, "<ConstExp>\n");
+        put(NodeType.ForStmt, "<ForStmt>\n");
     }};
 
     public static Parser getInstance() {
@@ -75,8 +76,13 @@ public class Parser {
     }
     public Token match(TokenType tokenType) {
         if (tokens.get(index).getType() == tokenType) {
-            return tokens.get(index++);
-        } else {
+            Token tmpNow =tokens.get(index);
+            if (index < tokens.size() - 1) {
+                now = tokens.get(++index);
+            }
+            return tmpNow;
+        }
+        else {
 //            throw new RuntimeException("Syntax error: " + tokens.get(index).toString()
 //                    + "should be "+tokenType+"\n at line " + tokens.get(index).getLineNumber()+ "\n "
 //                    + tokens.get(index-2).toString()+tokens.get(index-1).toString() +tokens.get(index).toString() +
@@ -87,12 +93,11 @@ public class Parser {
 
             switch (tokenType){
                 case RBRACK:
-                    //TODO: why index-1?
                     ErrorHandler.instance.addError(new Error(tokens.get(index-1).lineNumber, Error.ErrorType.k));
                     return new Token(TokenType.RBRACK,tokens.get(index-1).lineNumber,"]");
                 case SEMICN:
                     ErrorHandler.instance.addError(new Error(tokens.get(index-1).lineNumber, Error.ErrorType.i));
-                    return new Token(TokenType.SEMICN, tokens.get(index - 1).lineNumber, ";");
+                    return new Token(TokenType.SEMICN, tokens.get(index-1).lineNumber, ";");
                 case RPARENT:
                     ErrorHandler.instance.addError(new Error(tokens.get(index-1).lineNumber, Error.ErrorType.j));
                     return new Token(TokenType.RPARENT, tokens.get(index-1).lineNumber, ")");
@@ -571,7 +576,9 @@ public class Parser {
             Token rParentToken = null;
             FuncRParamsNode funcRParamsNode=null;
             if(!tokens.get(index).content.equals(")")){
-                if(tokens.get(index).type!=TokenType.IDENFR&&tokens.get(index).type!=TokenType.INTCON){
+                if(tokens.get(index).type!=TokenType.IDENFR&&tokens.get(index).type!=TokenType.INTCON
+                && !tokens.get(index).content.equals("+")&&!tokens.get(index).content.equals("-")
+                &&!tokens.get(index).content.equals("!")){//TODO:!只有条件表达式, 这里可能有问题? 可以是"("吗??
                     ErrorHandler.instance.addError(new Error(tokens.get(index).lineNumber, Error.ErrorType.j));
                 }
                 else

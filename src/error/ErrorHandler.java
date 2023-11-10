@@ -30,7 +30,12 @@ public class ErrorHandler {
     }
 
     public ReturnType findCurFunc() {//在函数体内时, 获得符号表关于该函数的内容
-        return symbolTables.get(symbolTables.size()-1).third;
+        for (int i=symbolTables.size()-1; i>=0; i--) {
+            if (symbolTables.get(i).third != null) {
+                return symbolTables.get(i).third;
+            }
+        }
+        return null;
     }
     public void removeSymbolTable() {
         symbolTables.remove(symbolTables.size() - 1);
@@ -286,15 +291,25 @@ public class ErrorHandler {
                                 lineNumber, Error.ErrorType.m));
             }
         } else if (stmtNode.stmtType == StmtNode.StmtType.Return) {
-            if (stmtNode.expNode !=null) {
-                // 函数是void, 但是return了值
-                if (findCurFunc() == ReturnType.VOID) {
-                    ErrorHandler.instance.addError(new Error(
-                            stmtNode.returnToken.lineNumber, Error.ErrorType.f
-                    ));
+            if (isInFunc()) {
+                if (stmtNode.expNode !=null) {
+                    // 函数是void, 但是return了值
+                    if (findCurFunc() == ReturnType.VOID&&stmtNode.expNode!=null) {
+                        ErrorHandler.instance.addError(new Error(
+                                stmtNode.returnToken.lineNumber, Error.ErrorType.f
+                        ));
+                    }
+                    if(stmtNode.expNode!=null)
+                        expError(stmtNode.expNode);
+                }else {//expNode是空
+                    if (findCurFunc() == ReturnType.INT) {
+                        ErrorHandler.instance.addError(new Error(
+                                stmtNode.returnToken.lineNumber, Error.ErrorType.g
+                        ));
+                    }
                 }
-                expError(stmtNode.expNode);
             }
+
         } else if (stmtNode.stmtType == StmtNode.StmtType.LValAssignExp) {
 
             expError(stmtNode.expNode);
@@ -338,6 +353,14 @@ public class ErrorHandler {
         }
 
 
+    }
+    public boolean isInFunc() {
+        for (int i = symbolTables.size() - 1; i >= 0; i--) {
+            if (symbolTables.get(i).second) {
+                return true;
+            }
+        }
+        return false;
     }
     public Symbol findIfDeclared(String ident) {
         for (int i = symbolTables.size() - 1; i >= 0; i--) {
@@ -389,13 +412,32 @@ public class ErrorHandler {
             }
         }
     }
-
+    public void primaryLValError(LValNode lValNode) {
+        //左值表达式   LVal → Ident {'[' Exp ']'} // c k
+        if (findIfDeclared(lValNode.ident.content) == null) {
+            ErrorHandler.instance.addError(new Error(lValNode.ident.lineNumber
+                    , Error.ErrorType.c));
+        }
+//        else if(((ArraySymbol) findIfDeclared(lValNode.ident.content)).isConst) {
+//            ErrorHandler.instance.addError(new Error(lValNode.ident.lineNumber
+//                    , Error.ErrorType.h));
+//        }
+        else {
+            for (ExpNode expNode : lValNode.expNodes) {
+                expError(expNode);
+            }
+        }
+    }
     public void primaryExpError(PrimaryExpNode primaryExpNode) {
         //基本表达式   PrimaryExp → '(' Exp ')' | LVal | Number
         if (primaryExpNode.expNode != null) {
             expError(primaryExpNode.expNode);
         } else if (primaryExpNode.lValNode != null) {
-            lValError(primaryExpNode.lValNode);
+            // 这里不能用通用的lValError, 因为lValError会直接检测是否const然后直接报错
+            // const int a=1;
+            // int b=a+1;
+            // 上面会报错
+            primaryLValError(primaryExpNode.lValNode);
 
         } else {
 
@@ -423,9 +465,9 @@ public class ErrorHandler {
                 //TODO: 这里的报错类型为何是e?
                 ErrorHandler.instance.addError(new Error(
                         unaryExpNode.ident.lineNumber, Error.ErrorType.e));
+                return;
             }
             // 参数. hello(x1,x2)
-            assert symbol instanceof FuncSymbol;
             FuncSymbol funcSymbol=(FuncSymbol) symbol;
             int errorFlag;
             //            如果没有提供FuncRParams，但是函数定义需要参数，报告错误。
@@ -443,6 +485,7 @@ public class ErrorHandler {
                     errorFlag=1;
                     ErrorHandler.instance.addError(
                             new Error(unaryExpNode.ident.lineNumber, Error.ErrorType.d));
+                    return;
                 }
                 //检查函数定义参数（FuncFParams）和传递的实参（FuncRParams）的维数是否匹配。
                 //参数的个数匹配了, 检查实参参数的变量是否已经定义
@@ -460,6 +503,7 @@ public class ErrorHandler {
                         if(funcParam.dimension!=funcSymbol.funcParams.get(flag).dimension){
                             ErrorHandler.instance.addError(new Error(
                                     unaryExpNode.ident.lineNumber, Error.ErrorType.e));
+                            return;
 
 
                     } }else {
@@ -470,6 +514,7 @@ public class ErrorHandler {
                             !=funcSymbol.funcParams.get(flag).dimension){
                                 ErrorHandler.instance.addError(new Error(
                                         unaryExpNode.ident.lineNumber, Error.ErrorType.e));
+                                return;
                             }
                             // 如果是函数
                         } else if (symbol instanceof FuncSymbol) {
@@ -572,7 +617,7 @@ public class ErrorHandler {
     private void eqExpError(EqExpNode eqExpNode) {
         // EqExp -> RelExp | RelExp ('==' | '!=') EqExp
         relExpError(eqExpNode.relExpNode);
-        if (eqExpNode.relExpNode != null) {
+        if (eqExpNode.eqExpNode != null) {
             eqExpError(eqExpNode.eqExpNode);
         }
     }

@@ -21,15 +21,13 @@ public class Compiler {
         }
         Parser.getInstance().setTokens(Lexer.getInstance().getTokens());
         Parser.getInstance().analyze();
-//        Parser.getInstance().setTokens(Lexer.getInstance().getTokens());
-//        Parser.getInstance().analyze();
         if (Config.parser) {
             Parser.instance.printParseAns();
         }
-//        ErrorHandler.instance.compUnitError(Parser.getInstance().compUnitNode);
-//        if (Config.error) {
-//            ErrorHandler.instance.printErrors();
-//        }
+        ErrorHandler.instance.compUnitError(Parser.getInstance().compUnitNode);
+        if (Config.error) {
+            ErrorHandler.instance.printErrors();
+        }
     }
 }
 

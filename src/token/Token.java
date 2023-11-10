@@ -37,6 +37,8 @@ public class Token {
 
     @Override
     public String toString() {
-        return type.toString() + " " + content + "\n";
+//        return type.toString() + " " + content +" at line "+ lineNumber+"\n";
+        return type.toString() + " " + content +"\n";
     }
+
 }

@@ -166,7 +166,9 @@ public class Lexer {
         if (nextChar == '/') {
             // 从i+2之后找\n的索引
             i = source.indexOf('\n', i + 2);
+            line++;
             if (i == -1) {
+                line--;
                 i = source.length() - 1;
             }
         } else if (nextChar == '*') {
