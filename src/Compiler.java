@@ -4,6 +4,7 @@ import error.ErrorHandler;
 import frontend.Parser;
 import frontend.Lexer;
 
+import llvmir.IRGenerator;
 import token.Token;
 import utils.IOUtils;
 
@@ -27,6 +28,10 @@ public class Compiler {
         ErrorHandler.instance.compUnitError(Parser.getInstance().compUnitNode);
         if (Config.error) {
             ErrorHandler.instance.printErrors();
+        }
+        IRGenerator.irGenerator.visitCompUnit(Parser.getInstance().compUnitNode);
+        if (Config.ir) {
+            IOUtils.write(IRGenerator.irGenerator.toString(),"llvm_ir.txt");
         }
     }
 }

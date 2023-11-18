@@ -7,7 +7,7 @@ import utils.IOUtils;
 public class UnaryOpNode {
     // UnaryOp -> '+' | '−' | '!'
 
-    Token token;
+    public Token token;
 
     public UnaryOpNode(Token token) {
         this.token = token;
