@@ -1,6 +1,16 @@
+const int a=1;
+const int b=2+a;
+int c=3*(b+ -+-+-+-+-+-10);
 int main(){
-  int a;
-  a=getint();
-  printf("hello:%d",a);
-  return 0;
+  int d=4+c;
+  int e=5*d;
+  {
+    int d=a+5;
+    int c=c*2;
+    d=b;
+    int f=20;
+    e=e+a*20;
+  }
+  int f=10;
+  return e*f;
 }
