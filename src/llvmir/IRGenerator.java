@@ -30,8 +30,8 @@ public class IRGenerator {
     public static StringBuilder llvmir = new StringBuilder();
     public List<Triple<Map<String, Symbol>, Boolean, FuncSymbol.ReturnType>>
             symbolTables = new ArrayList<>();
-    public LinkedHashMap<String,String> var2RegMap=new LinkedHashMap<>();//变量到寄存器的映射
-    public LinkedHashMap<String,String> reg2ValueMap=new LinkedHashMap<>();//寄存器到值的映射
+
+
     public String findIndentation() {//获取代码缩进
 //        int size=1;
 //        StringBuilder sb = new StringBuilder();
@@ -311,14 +311,14 @@ public class IRGenerator {
 
 
         if (isGlobal) {
-            var2RegMap.put(varDefNode.identToken.content, "@" + ident);
+
             if (varDefNode.initValNode == null) {
                 put(varDefNode.identToken.content,
                         new ArraySymbol(varDefNode.identToken.content,
                                 false, varDefNode.constExpNodes.size(),
                                 "* @" + ident,"0")
                 );
-                reg2ValueMap.put("@" + ident,"0");
+
                 llvmir.append("@").append(ident).append(" = dso_local global i32 ").append("0\n");
             } else {
 
@@ -328,18 +328,18 @@ public class IRGenerator {
                                 false, varDefNode.constExpNodes.size(),
                                 "* @" + ident,saveValue.toString())
                 );
-                reg2ValueMap.put("@" + ident,saveValue.toString());
+
                 llvmir.append("@").append(ident).append(" = dso_local global i32 ").append(saveValue).append("\n");
             }
         } else {
-            var2RegMap.put(varDefNode.identToken.content, "%" + regNum);
+
             if (varDefNode.initValNode == null) {
                 put(varDefNode.identToken.content,
                         new ArraySymbol(varDefNode.identToken.content,
                                 false, varDefNode.constExpNodes.size(),
                                 "* %" + regNum,"0")
                 );
-                reg2ValueMap.put("%" + regNum,"0");
+
                 llvmir.append("%").append(regNum).append(" = alloca i32\n");
                 llvmir.append(findIndentation());
                 llvmir.append("store i32 ").append(0).append(", i32* ").append("%").append(regNum++).append("\n");
@@ -358,7 +358,7 @@ public class IRGenerator {
                                 false, varDefNode.constExpNodes.size(),
                                 "* %" + regNum,null)
                 );
-                reg2ValueMap.put("%" + regNum,saveValue.toString());
+
                 llvmir.append(findIndentation());
                 llvmir.append("%").append(regNum).append(" = alloca i32\n");
                 llvmir.append(findIndentation());
@@ -399,8 +399,8 @@ public class IRGenerator {
                     constDef.identToken.content, true,
                     constDef.constExpNodes.size(),"* @" + ident,saveValue.toString()
             ));
-            var2RegMap.put(constDef.identToken.content, "@" + ident);//全局变量也加进去map
-            reg2ValueMap.put("@" + ident,saveValue.toString());
+
+
             llvmir.append("@").append(ident).append(" = dso_local constant i32 ").append(saveValue).append("\n");
         } else {
 
@@ -410,8 +410,8 @@ public class IRGenerator {
                     constDef.identToken.content, true,
                     constDef.constExpNodes.size(),"* %" + regNum,null
             ));
-            var2RegMap.put(constDef.identToken.content, "%" + regNum);
-            reg2ValueMap.put("%" + regNum,saveValue.toString());
+
+
 
             llvmir.append(findIndentation());
             llvmir.append("%").append(regNum).append(" = alloca i32\n");
@@ -457,10 +457,18 @@ public class IRGenerator {
 
             visitBlockItem(blockItemNode);
         }
+        //TODO:必须要是函数!
         //如果最后一句没有return 要加上!
-        if (blockNode.blockItemNodes.get(i - 1).stmtNode.returnToken == null) {
-            llvmir.append("ret void\n");
+        if(symbolTables.get(symbolTables.size()-1).second){
+            if(blockNode.blockItemNodes.size()>1){
+                if (blockNode.blockItemNodes.get(i - 1).stmtNode.returnToken == null) {
+                    llvmir.append("ret void\n");
+                }
+            } else if (blockNode.blockItemNodes.size() == 0) {
+                llvmir.append("ret void\n");
+            }
         }
+
 
     }
 
@@ -536,12 +544,16 @@ public class IRGenerator {
             //     | 'printf''('FormatString{','Exp}')'';'
             String[] formatStrings = stmtNode.formatString.getContent().replace("\\n", "\n").replace("\"", "").split("%d");
             List<Integer> args = new ArrayList<>();
+            List<String> args2 = new ArrayList<>();
             int i = 0,j=0;
             for (ExpNode expNode : stmtNode.expNodes) {
                 saveValue=null;
+                tmpValue=null;
                 visitExp(expNode);
                 args.add(saveValue);
+                args2.add(tmpValue);
                 saveValue=null;
+                tmpValue=null;
                 j++;
             }
             for (String formatString : formatStrings) {
@@ -549,12 +561,20 @@ public class IRGenerator {
                     llvmir.append("call void @putch(i32 ").append((int) c).append(")\n");
                     llvmir.append(findIndentation());
                 }
-                if (!args.isEmpty()) {
+                if (!args2.isEmpty()) {
                     int num=regNum-j;
-                    llvmir.append("call void @putint(i32 ").append("%"+num).append(")\n");
+                    llvmir.append("call void @putint(i32 ").append(args2.get(0)).append(")\n");
                     llvmir.append(findIndentation());
+                    args2.remove(0);
                     j--;
                 }
+            }
+            if (!args2.isEmpty()) {
+                int num=regNum-j;
+                llvmir.append("call void @putint(i32 ").append(args2.get(0)).append(")\n");
+                llvmir.append(findIndentation());
+                args2.remove(0);
+                j--;
             }
         } else if (stmtNode.stmtType== StmtNode.StmtType.Exp){
             if (stmtNode.expNode != null) {
@@ -685,9 +705,9 @@ public class IRGenerator {
                 if (mulExpNode.operation.getType() == TokenType.MULT) {
                     llvmOp = "mul";
                 } else if (mulExpNode.operation.getType() == TokenType.DIV) {
-                    llvmOp = "div";
+                    llvmOp = "sdiv";
                 } else {
-                    llvmOp = "rem";
+                    llvmOp = "srem";
                 }
                 // 如果直接是数, 就不做处理!
                 if(leftValue.matches("^-?\\d+$")){
@@ -806,14 +826,6 @@ public class IRGenerator {
                     length=unaryExpNode.funcRParamsNode.expNodes.size();
                 }
                 if (funcSymbol.funcParams.size() != 0) {
-//                    for (FuncParam funcParam : funcSymbol.funcParams) {
-//                        if (funcParam.dimension ==0) {
-//                            String regName=getRegiNameFromVar(funcParam.name);
-//                            llvmir.append("%" + regNum + " = load i32, i32" + regName + "\n");
-//                            args.add("%" + regNum);
-//                            regNum++;
-//                        }
-//                    }
                     if (unaryExpNode.funcRParamsNode !=null) {
 
                         visitfuncRParams(unaryExpNode.funcRParamsNode);
@@ -826,6 +838,7 @@ public class IRGenerator {
 
                 } else if (funcSymbol.type == FuncSymbol.ReturnType.INT) {
                     llvmir.append("%"+regNum+" =  call i32 "+funcSymbol.name+"(");
+                    tmpValue="%"+regNum;
                     regNum++;
                 }
                 if(length > 0) {
@@ -899,7 +912,7 @@ public class IRGenerator {
         tmpValue=getRegiNameFromVar(lValNode.ident.content);
 //        llvmir.append("%").append(regNum).append(" = add i32 0, ").append("")
         if (isInExp) {
-            llvmir.append("%").append(regNum).append(" = load i32, i32 ").append(tmpValue).append("\n");
+            llvmir.append("%").append(regNum).append(" = load i32, i32").append(tmpValue).append("\n");
             tmpValue= "%"+String.valueOf(regNum);
             regNum++;
         }

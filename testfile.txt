@@ -1,24 +1,6 @@
-int a=1000;
 
-void voidFunWith0Param(){
-        a=1200;
-
-}
-int intFunWith0Param(){
-    return 5;
-}
-int intFunWith2Params(int a, int b){
-    return a+b;
-}
-void voidFunWith2Params(int a,int b){
-    return;
-}
 int main(){
-    int t=2,q=3;
-        voidFunWith0Param();
-        int m=intFunWith0Param();
-        int n=intFunWith2Params(t,q);
-        intFunWith2Params(t,q);
-        voidFunWith2Params(t,q);
-        return n;
+ int a=4*13/9;
+
+ return a;
 }
