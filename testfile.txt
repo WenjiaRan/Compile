@@ -1,16 +1,24 @@
-const int a=1;
-const int b=2+a;
-int c=3*(b+ -+-+-+-+-+-10);
+int a=1000;
+
+void voidFunWith0Param(){
+        a=1200;
+
+}
+int intFunWith0Param(){
+    return 5;
+}
+int intFunWith2Params(int a, int b){
+    return a+b;
+}
+void voidFunWith2Params(int a,int b){
+    return;
+}
 int main(){
-  int d=4+c;
-  int e=5*d;
-  {
-    int d=a+5;
-    int c=c*2;
-    d=b;
-    int f=20;
-    e=e+a*20;
-  }
-  int f=10;
-  return e*f;
+    int t=2,q=3;
+        voidFunWith0Param();
+        int m=intFunWith0Param();
+        int n=intFunWith2Params(t,q);
+        intFunWith2Params(t,q);
+        voidFunWith2Params(t,q);
+        return 0;
 }

@@ -1,16 +1,25 @@
 package llvmir;
 
+import llvmir.type.Type;
 import node.*;
 
 import java.util.*;
 
 import symbol.ArraySymbol;
+import symbol.FuncParam;
 import symbol.FuncSymbol;
 import symbol.Symbol;
 import token.TokenType;
 import utils.Triple;
 
 public class IRGenerator {
+    public static Boolean shouldAddLoad;
+    public static Integer copyRegNum;//保存全局regNum的值
+//    public static Integer regNum;
+    public static boolean isInFunc=false;
+    public static boolean isInFuncWithNoParams=false;
+    public List<Type> tmpTypeList=null;
+    public static boolean isInExp=false;
     public static boolean isConst;
     public static boolean isGlobal=false;
     public static int regNum=1;
@@ -21,7 +30,6 @@ public class IRGenerator {
     public static StringBuilder llvmir = new StringBuilder();
     public List<Triple<Map<String, Symbol>, Boolean, FuncSymbol.ReturnType>>
             symbolTables = new ArrayList<>();
-    //TODO:var2RegMap,reg2ValueMap没用!
     public LinkedHashMap<String,String> var2RegMap=new LinkedHashMap<>();//变量到寄存器的映射
     public LinkedHashMap<String,String> reg2ValueMap=new LinkedHashMap<>();//寄存器到值的映射
     public String findIndentation() {//获取代码缩进
@@ -75,13 +83,16 @@ public class IRGenerator {
             Map<String, Symbol> symbol=symbolTables.get(i).first;
             for (Map.Entry<String, Symbol> entry : symbol.entrySet()) {
                 String key = entry.getKey();
-                ArraySymbol value = (ArraySymbol) entry.getValue();
-                if (Objects.equals(value.regiName, regiName)) {
-                    if (Objects.equals(value.value, "null")) {
-                        return null;
+                if(entry.getValue() instanceof ArraySymbol) {
+                    ArraySymbol value = (ArraySymbol) entry.getValue();
+                    if (Objects.equals(value.regiName, regiName)) {
+                        if (Objects.equals(value.value, "null")) {
+                            return null;
+                        }
+                        return value.value;
                     }
-                    return value.value;
                 }
+
 
             }
         }
@@ -120,9 +131,16 @@ public class IRGenerator {
     }
 
 
+    public void remainRegNum() { //定义函数的时候需要用到一套新的reg
+        copyRegNum=regNum;
+        regNum=0;
+    }
 
+    public void restoreRegNum() {// 恢复寄存器的值, 回到main函数
+        regNum=copyRegNum;
+    }
     public void visitCompUnit(CompUnitNode compUnitNode) {
-        //CompUnit     → {Decl} MainFuncDef
+        //CompUnit    → {Decl} {FuncDef} MainFuncDef
         addSymbolTable(false, null);
         llvmir.append("""
                 declare i32 @getint()
@@ -137,11 +155,116 @@ public class IRGenerator {
             visitDecl(declNode);
             isGlobal=false;
         }
-//        for (FuncDefNode funcDefNode : compUnitNode.funcDefNodes) {
-//            visitFuncDef(funcDefNode);
-//        }
+
+        for (FuncDefNode funcDefNode : compUnitNode.funcDefNodes) {
+            remainRegNum();
+            visitFuncDef(funcDefNode);
+            restoreRegNum();
+        }
         visitMainFuncDef(compUnitNode.mainFuncDefNode);
     }
+
+    private void visitFuncDef(FuncDefNode funcDefNode) {
+        //FuncDef     → FuncType Ident '(' [FuncFParams] ')' Block
+        isGlobal = false;
+        isInFunc=true;
+//        FuncSymbol.ReturnType type = funcDefNode.funcTypeNode.token.getType() == TokenType.INTTK ? FuncSymbol.ReturnType.INT : FuncSymbol.ReturnType.VOID;
+//        String funcName = funcDefNode.ident.getContent();
+//        tmpTypeList = new ArrayList<>();
+//        if (funcDefNode.funcFParamsNode!= null) {
+//            visitFuncFParams(funcDefNode.funcFParamsNode);
+//        }
+
+//        FuncSymbol funcSymbol=new FuncSymbol(funcName,type,)
+//        addSymbolTable(true, type);
+        // 函数名进符号表
+        FuncSymbol.ReturnType returnType=Objects.equals(funcDefNode.funcTypeNode.token.content, "void") ?
+                FuncSymbol.ReturnType.VOID: FuncSymbol.ReturnType.INT;
+        if (funcDefNode.funcFParamsNode == null) {
+            llvmir.append("define dso_local void "+"@"+funcDefNode.ident.content+"(");
+            isInFuncWithNoParams=true;
+            put(funcDefNode.ident.content, new FuncSymbol
+                    ("@"+funcDefNode.ident.content,
+                            Objects.equals(funcDefNode.funcTypeNode.token.content, "void") ?
+                                    FuncSymbol.ReturnType.VOID: FuncSymbol.ReturnType.INT, new ArrayList<>()));
+        } else {
+            // 有参数
+            isInFuncWithNoParams=false;
+            List<FuncParam> params = new ArrayList<>();
+            int i=0;
+            for (FuncFParamNode funcFParamNode :
+                    funcDefNode.funcFParamsNode.funcFParamNodes) {
+                i++;
+                params.add(new FuncParam(funcFParamNode.ident.content,
+                        funcFParamNode.leftSqareBrack.size()));
+            }
+            llvmir.append("define dso_local i32 "+"@"+funcDefNode.ident.content+"(");
+//            for (int j=0;j<i-1;j++) {
+//                llvmir.append("i32 %" + regNum++ + ", ");
+//            }
+//            llvmir.append("i32 %" + regNum++ +")");
+            put(funcDefNode.ident.content, new FuncSymbol
+                    ("@"+funcDefNode.ident.content, Objects.equals(funcDefNode.funcTypeNode.token.content, "void") ?
+                            FuncSymbol.ReturnType.VOID: FuncSymbol.ReturnType.INT, params));
+        }
+
+        addSymbolTable(true, returnType);
+        if (funcDefNode.funcFParamsNode != null) {
+            visitfuncFParams(funcDefNode.funcFParamsNode);
+            llvmir.delete(llvmir.length() - 2, llvmir.length());
+        }
+        llvmir.append(") {\n");
+        //进入block了, regNum要++
+        if (isInFunc) {
+            regNum++;
+        }
+        if (isInFuncWithNoParams == false) {
+            // 如果有参数, 必须先如下操作!
+//            %3 = alloca i32, align 4
+//            %4 = alloca i32, align 4
+//            store i32 %0, i32* %3, align 4
+//            store i32 %1, i32* %4, align 4
+
+            Map<String, Symbol> params=symbolTables.get(symbolTables.size()-1).first;
+            // 遍历所有键
+            for (Map.Entry<String, Symbol> entry : params.entrySet())  {
+                String key = entry.getKey();
+                ArraySymbol symbol = (ArraySymbol) entry.getValue();
+                llvmir.append("%" + regNum + " = alloca i32\n");
+                String originRegName = symbol.regiName;
+                String curRegName= "* %"+ regNum;
+                symbol.regiName=curRegName;
+                llvmir.append("store i32 " + originRegName + ", i32" + curRegName + "\n");
+                regNum++;
+            }
+
+        }
+
+        visitBlock(funcDefNode.blockNode);
+
+        llvmir.append("\n}\n");
+        regNum=0;
+
+        isInFunc=false;
+        removeSymbolTable();
+    }
+
+    private void visitfuncFParams(FuncFParamsNode funcFParamsNode) {
+        //函数形参表   FuncFParams → FuncFParam { ',' FuncFParam }
+        for(FuncFParamNode funcFParamNode:
+                funcFParamsNode.funcFParamNodes){
+            visitFuncFParam(funcFParamNode);
+        }
+    }
+
+    private void visitFuncFParam(FuncFParamNode funcFParamNode) {
+        //函数形参    FuncFParam → BType Ident ['[' ']' { '[' ConstExp ']' }]  //   b k
+        String name=funcFParamNode.ident.content;
+        llvmir.append("i32 %" + regNum + ", ");
+        put(name, new ArraySymbol( name, false, funcFParamNode.leftSqareBrack.size(),"%" + regNum,null));
+        regNum++;
+    }
+
 
     private void visitDecl(DeclNode declNode) {
         //Decl         → ConstDecl | VarDecl
@@ -198,7 +321,7 @@ public class IRGenerator {
                 llvmir.append(findIndentation());
                 llvmir.append("store i32 ").append(0).append(", i32* ").append("%").append(regNum++).append("\n");
             } else {
-                //TODO: 对于8+a这种式子也吸收进去了! 要不判断addExpNode.addExpNode是否为空???然后Mul也是一样...
+
 //                int flag=0,var=0;
 //                if(varDefNode.initValNode.expNode.addExpNode.mulExpNode.unaryExpNode.primaryExpNode.numberNode!=null){
 //                    flag=1;
@@ -257,15 +380,8 @@ public class IRGenerator {
             reg2ValueMap.put("@" + ident,saveValue.toString());
             llvmir.append("@").append(ident).append(" = dso_local constant i32 ").append(saveValue).append("\n");
         } else {
-//            int flag=0,var=0;
-//            //TODO: 对于8+a这种式子也吸收进去了!
-//            if(constDef.constInitValNode.constExpNode.addExpNode.mulExpNode.unaryExpNode.primaryExpNode.numberNode!=null){
-//                flag=1;
-//                var= Integer.parseInt(constDef.constInitValNode.constExpNode.addExpNode.mulExpNode.unaryExpNode.primaryExpNode.numberNode.getToken().content);
-//            }
-//            else{
+
                 visitConstInitVal(constDef.constInitValNode);
-//            }
 
             put(constDef.identToken.content, new ArraySymbol(
                     constDef.identToken.content, true,
@@ -302,19 +418,26 @@ public class IRGenerator {
         //MainFuncDef → 'int' 'main' '(' ')' Block
         llvmir.append("define dso_local i32 @main() ");
         llvmir.append("{\n");
+        addSymbolTable(true, FuncSymbol.ReturnType.INT);
         visitBlock(mainFuncDefNode.blockNode);
+        removeSymbolTable();
         llvmir.append("\n}\n");
     }
 
 
     private void visitBlock(BlockNode blockNode) {
         //Block       → '{' { BlockItem } '}'
-
+        int i=0;
         for(BlockItemNode blockItemNode:blockNode.blockItemNodes){
+            i++;
             llvmir.append(findIndentation());
+
             visitBlockItem(blockItemNode);
         }
-
+        //如果最后一句没有return 要加上!
+        if (blockNode.blockItemNodes.get(i - 1).stmtNode.returnToken == null) {
+            llvmir.append("ret void\n");
+        }
 
     }
 
@@ -336,14 +459,36 @@ public class IRGenerator {
         //LVal '=' 'getint''('')'';'
         //     | 'printf''('FormatString{','Exp}')'';'
         if (stmtNode.stmtType== StmtNode.StmtType.Return) {
-            visitExp(stmtNode.expNode);
-            llvmir.append("ret i32 ");
-            int curReg=regNum-1;
-            llvmir.append("%"+curReg).append("\n");
-            saveValue=null;//使用了要归零
+            int isVoid=1;
+            if (stmtNode.expNode != null) {
+                isVoid=0;
+                visitExp(stmtNode.expNode);
+            }
+            if (isVoid == 1) {
+                llvmir.append("ret void\n");
+            } else {
+                llvmir.append("ret i32 ");
+                int curReg=regNum-1;
+                llvmir.append("%"+curReg).append("\n");
+                saveValue=null;//使用了要归零
+            }
         } else if (stmtNode.stmtType== StmtNode.StmtType.LValAssignExp) {
             visitExp(stmtNode.expNode);
-            int newValue = saveValue;
+            Integer newValue = saveValue;
+            //TODO: 有问题!!!
+            // int a=1000;
+            // int main(){
+            //        a=getint(); 此时全局变量也不确定了!!!
+            //        int b=a+3;
+            //        return 0;
+            // Solution:如果是在函数体内,就取消全部变量的地位!!!
+            // 可以在{Decl}结束之后取消所有全局变量的地位, 符号表和isGlobal...
+            // 不要直接写, 先在这里调试一下, testfile.txt貌似就有问题!
+            // 调试一下这个函数
+            //}
+//            if (newValue != null) {
+//
+//            }
             changeValueFromVar(stmtNode.lValNode.ident.content, null);
 
 //            llvmir.append("%").append(regNum).append(" = add i32 0, ").append(regNum-1).append("\n");
@@ -361,19 +506,20 @@ public class IRGenerator {
             llvmir.append("%").append(regNum).append(" = call i32 @getint()\n");
             String regName=getRegiNameFromVar(stmtNode.lValNode.ident.content);
             llvmir.append(findIndentation());
-            llvmir.append("store i32 ").append("%"+regNum).append(", i32* ").append(regName).append("\n");
+            llvmir.append("store i32 ").append("%"+regNum++).append(", i32").append(regName).append("\n");
 
         }
         else if (stmtNode.stmtType == StmtNode.StmtType.Printf) {
             //     | 'printf''('FormatString{','Exp}')'';'
             String[] formatStrings = stmtNode.formatString.getContent().replace("\\n", "\n").replace("\"", "").split("%d");
             List<Integer> args = new ArrayList<>();
-            int i = 0;
+            int i = 0,j=0;
             for (ExpNode expNode : stmtNode.expNodes) {
                 saveValue=null;
                 visitExp(expNode);
                 args.add(saveValue);
                 saveValue=null;
+                j++;
             }
             for (String formatString : formatStrings) {
                 for (char c : formatString.toCharArray()) {
@@ -381,12 +527,16 @@ public class IRGenerator {
                     llvmir.append(findIndentation());
                 }
                 if (!args.isEmpty()) {
-                    llvmir.append("call void @putint(i32 ").append(args.get(i++)).append(")\n");
+                    int num=regNum-j;
+                    llvmir.append("call void @putint(i32 ").append("%"+num).append(")\n");
                     llvmir.append(findIndentation());
+                    j--;
                 }
             }
-        } else {
-            //TODO:[Exp] ';'不用处理?
+        } else if (stmtNode.stmtType== StmtNode.StmtType.Exp){
+            if (stmtNode.expNode != null) {
+                visitExp(stmtNode.expNode);
+            }
         }
 
 
@@ -399,6 +549,7 @@ public class IRGenerator {
     }
 
     private void visitAdd(AddExpNode addExpNode) {
+        isInExp=true;
         if (isGlobal) {
             this.visitMulExp(addExpNode.mulExpNode);
             if (addExpNode.addExpNode != null) {
@@ -466,13 +617,13 @@ public class IRGenerator {
                 tmpValue = "%" + tmpVarNum; // 更新tmpValue为新的临时变量
             } else {
                 tmpValue = leftValue; // 没有右侧表达式，直接使用左侧结果
-                //TODO: 我日你妈!!!
 //                llvmir.append("%").append(regNum++).append(" = ")
 //                        .append("add").append(" i32 ")
 //                        .append(leftValue).append(", ").append("0")
 //                        .append("\n");
             }
         }
+        isInExp=false;
     }
 
     // 辅助方法：获取下一个临时变量编号
@@ -581,7 +732,8 @@ public class IRGenerator {
 //            // 处理函数调用或变量
 //            // 你可能需要根据你的实现细节调整这里的代码
 //            visitFunctionOrVariable(unaryExpNode.ident, unaryExpNode.funcRParamsNode);
-            } else {
+            }
+            else if(unaryExpNode.unaryOpNode!=null) {
                 // 处理一元操作符
                 visitUnaryExp(unaryExpNode.unaryExpNode);
                 String value = tmpValue;
@@ -618,7 +770,44 @@ public class IRGenerator {
                     // 根据需求添加相应的代码
                 }
             }
+            else{
+                //TODO:!!!
+                //先判断参数个数
+                FuncSymbol funcSymbol = (FuncSymbol) symbolTables.get(0).first.get(unaryExpNode.ident.content);
+                List<String> args = new ArrayList<String>();
+                if (funcSymbol.funcParams.size() != 0) {
+                    for (FuncParam funcParam : funcSymbol.funcParams) {
+                        if (funcParam.dimension ==0) {
+                            String regName=getRegiNameFromVar(funcParam.name);
+                            llvmir.append("%" + regNum + " = load i32, i32" + regName + "\n");
+                            args.add("%" + regNum);
+                            regNum++;
+                        }
+                    }
+                }
+                //TODO: voidFunWith0Param();到不了这里??
+                if (funcSymbol.type == FuncSymbol.ReturnType.VOID) {
+                    llvmir.append("call void " + funcSymbol.name + "(");
+
+                } else if (funcSymbol.type == FuncSymbol.ReturnType.INT) {
+                    llvmir.append("%"+regNum+" =  call i32 "+funcSymbol.name+"(");
+                    regNum++;
+                }
+                if(args.size() > 0) {
+                    int i;
+                    for (i=0; i<args.size()-1; i++) {
+                        String param = args.get(i);
+                        llvmir.append("i32 " + param+", ");
+                    }
+                    llvmir.append("i32 " + args.get(i));
+                }
+                llvmir.append(")\n");
+
+            }
         }
+    }
+
+    private void visitfuncRParams(FuncRParamsNode funcRParamsNode) {
     }
 
     private void visitFunctionOrVariable(IdentNode ident, FuncRParamsNode funcRParamsNode) {
@@ -656,7 +845,6 @@ public class IRGenerator {
         tmpValue=numberNode.getToken().content;
         saveValue= Integer.valueOf(tmpValue);
         if (!isGlobal) {
-            //TODO!!!这里或许可以改!
             llvmir.append("%").append(regNum).append(" = add i32 0, ").append(tmpValue).append("\n");
             regNum++;
         }
@@ -669,6 +857,11 @@ public class IRGenerator {
 //        llvmir.append("store i32 "+);
         tmpValue=getRegiNameFromVar(lValNode.ident.content);
 //        llvmir.append("%").append(regNum).append(" = add i32 0, ").append("")
+        if (isInExp) {
+            llvmir.append("%").append(regNum).append(" = load i32, i32 ").append(tmpValue).append("\n");
+            tmpValue= "%"+String.valueOf(regNum);
+            regNum++;
+        }
     }
 
 
