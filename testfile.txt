@@ -20,5 +20,5 @@ int main(){
         int n=intFunWith2Params(t,q);
         intFunWith2Params(t,q);
         voidFunWith2Params(t,q);
-        return 0;
+        return n;
 }

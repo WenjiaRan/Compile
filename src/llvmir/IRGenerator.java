@@ -168,44 +168,67 @@ public class IRGenerator {
         //FuncDef     → FuncType Ident '(' [FuncFParams] ')' Block
         isGlobal = false;
         isInFunc=true;
-//        FuncSymbol.ReturnType type = funcDefNode.funcTypeNode.token.getType() == TokenType.INTTK ? FuncSymbol.ReturnType.INT : FuncSymbol.ReturnType.VOID;
-//        String funcName = funcDefNode.ident.getContent();
-//        tmpTypeList = new ArrayList<>();
-//        if (funcDefNode.funcFParamsNode!= null) {
-//            visitFuncFParams(funcDefNode.funcFParamsNode);
-//        }
-
-//        FuncSymbol funcSymbol=new FuncSymbol(funcName,type,)
-//        addSymbolTable(true, type);
         // 函数名进符号表
         FuncSymbol.ReturnType returnType=Objects.equals(funcDefNode.funcTypeNode.token.content, "void") ?
                 FuncSymbol.ReturnType.VOID: FuncSymbol.ReturnType.INT;
+        //无参数
         if (funcDefNode.funcFParamsNode == null) {
-            llvmir.append("define dso_local void "+"@"+funcDefNode.ident.content+"(");
-            isInFuncWithNoParams=true;
-            put(funcDefNode.ident.content, new FuncSymbol
-                    ("@"+funcDefNode.ident.content,
-                            Objects.equals(funcDefNode.funcTypeNode.token.content, "void") ?
-                                    FuncSymbol.ReturnType.VOID: FuncSymbol.ReturnType.INT, new ArrayList<>()));
-        } else {
-            // 有参数
-            isInFuncWithNoParams=false;
-            List<FuncParam> params = new ArrayList<>();
-            int i=0;
-            for (FuncFParamNode funcFParamNode :
-                    funcDefNode.funcFParamsNode.funcFParamNodes) {
-                i++;
-                params.add(new FuncParam(funcFParamNode.ident.content,
-                        funcFParamNode.leftSqareBrack.size()));
+            //void
+            if (returnType == FuncSymbol.ReturnType.VOID) {
+                llvmir.append("define dso_local void "+"@"+funcDefNode.ident.content+"(");
+                isInFuncWithNoParams=true;
+                put(funcDefNode.ident.content, new FuncSymbol
+                        ("@"+funcDefNode.ident.content,
+                                Objects.equals(funcDefNode.funcTypeNode.token.content, "void") ?
+                                        FuncSymbol.ReturnType.VOID: FuncSymbol.ReturnType.INT, new ArrayList<>()));
             }
-            llvmir.append("define dso_local i32 "+"@"+funcDefNode.ident.content+"(");
-//            for (int j=0;j<i-1;j++) {
-//                llvmir.append("i32 %" + regNum++ + ", ");
-//            }
-//            llvmir.append("i32 %" + regNum++ +")");
-            put(funcDefNode.ident.content, new FuncSymbol
-                    ("@"+funcDefNode.ident.content, Objects.equals(funcDefNode.funcTypeNode.token.content, "void") ?
-                            FuncSymbol.ReturnType.VOID: FuncSymbol.ReturnType.INT, params));
+            //int
+            else{
+                llvmir.append("define dso_local i32 "+"@"+funcDefNode.ident.content+"(");
+                put(funcDefNode.ident.content, new FuncSymbol
+                        ("@"+funcDefNode.ident.content, Objects.equals(funcDefNode.funcTypeNode.token.content, "void") ?
+                                FuncSymbol.ReturnType.VOID: FuncSymbol.ReturnType.INT,new ArrayList<>() ));
+            }
+
+        }
+        else {
+            // 有参数
+            //void
+            if (returnType == FuncSymbol.ReturnType.VOID) {
+                isInFuncWithNoParams=false;
+                List<FuncParam> params = new ArrayList<>();
+                int i=0;
+                for (FuncFParamNode funcFParamNode :
+                        funcDefNode.funcFParamsNode.funcFParamNodes) {
+                    i++;
+                    params.add(new FuncParam(funcFParamNode.ident.content,
+                            funcFParamNode.leftSqareBrack.size()));
+                }
+                llvmir.append("define dso_local void "+"@"+funcDefNode.ident.content+"(");
+
+                put(funcDefNode.ident.content, new FuncSymbol
+                        ("@"+funcDefNode.ident.content, Objects.equals(funcDefNode.funcTypeNode.token.content, "void") ?
+                                FuncSymbol.ReturnType.VOID: FuncSymbol.ReturnType.INT, params));
+            }
+            //int
+            else{
+                isInFuncWithNoParams=false;
+                List<FuncParam> params = new ArrayList<>();
+                int i=0;
+                for (FuncFParamNode funcFParamNode :
+                        funcDefNode.funcFParamsNode.funcFParamNodes) {
+                    i++;
+                    params.add(new FuncParam(funcFParamNode.ident.content,
+                            funcFParamNode.leftSqareBrack.size()));
+                }
+                llvmir.append("define dso_local i32 "+"@"+funcDefNode.ident.content+"(");
+
+                put(funcDefNode.ident.content, new FuncSymbol
+                        ("@"+funcDefNode.ident.content, Objects.equals(funcDefNode.funcTypeNode.token.content, "void") ?
+                                FuncSymbol.ReturnType.VOID: FuncSymbol.ReturnType.INT, params));
+            }
+
+
         }
 
         addSymbolTable(true, returnType);
@@ -771,21 +794,33 @@ public class IRGenerator {
                 }
             }
             else{
-                //TODO:!!!
+                //Ident '(' [FuncRParams] ')'
                 //先判断参数个数
-                FuncSymbol funcSymbol = (FuncSymbol) symbolTables.get(0).first.get(unaryExpNode.ident.content);
-                List<String> args = new ArrayList<String>();
-                if (funcSymbol.funcParams.size() != 0) {
-                    for (FuncParam funcParam : funcSymbol.funcParams) {
-                        if (funcParam.dimension ==0) {
-                            String regName=getRegiNameFromVar(funcParam.name);
-                            llvmir.append("%" + regNum + " = load i32, i32" + regName + "\n");
-                            args.add("%" + regNum);
-                            regNum++;
-                        }
-                    }
+                // TODO: FuncSymbol这里面是形参, 不是实参!!!
+                FuncSymbol funcSymbol = (FuncSymbol) symbolTables.get(0).first.get
+                        (unaryExpNode.ident.content);
+//                List<String> args = new ArrayList<String>();
+                // 参数数量
+                int length=0;
+                if(unaryExpNode.funcRParamsNode!=null&&unaryExpNode.funcRParamsNode.expNodes!=null){
+                    length=unaryExpNode.funcRParamsNode.expNodes.size();
                 }
-                //TODO: voidFunWith0Param();到不了这里??
+                if (funcSymbol.funcParams.size() != 0) {
+//                    for (FuncParam funcParam : funcSymbol.funcParams) {
+//                        if (funcParam.dimension ==0) {
+//                            String regName=getRegiNameFromVar(funcParam.name);
+//                            llvmir.append("%" + regNum + " = load i32, i32" + regName + "\n");
+//                            args.add("%" + regNum);
+//                            regNum++;
+//                        }
+//                    }
+                    if (unaryExpNode.funcRParamsNode !=null) {
+
+                        visitfuncRParams(unaryExpNode.funcRParamsNode);
+                    }
+
+                }
+
                 if (funcSymbol.type == FuncSymbol.ReturnType.VOID) {
                     llvmir.append("call void " + funcSymbol.name + "(");
 
@@ -793,13 +828,14 @@ public class IRGenerator {
                     llvmir.append("%"+regNum+" =  call i32 "+funcSymbol.name+"(");
                     regNum++;
                 }
-                if(args.size() > 0) {
+                if(length > 0) {
                     int i;
-                    for (i=0; i<args.size()-1; i++) {
-                        String param = args.get(i);
-                        llvmir.append("i32 " + param+", ");
+                    int num=regNum-length-1;
+                    for (i=0; i<length-1; i++) {
+                        llvmir.append("i32 " +"%"+num +", ");
+                        num++;
                     }
-                    llvmir.append("i32 " + args.get(i));
+                    llvmir.append("i32 " +"%"+num);
                 }
                 llvmir.append(")\n");
 
@@ -808,7 +844,12 @@ public class IRGenerator {
     }
 
     private void visitfuncRParams(FuncRParamsNode funcRParamsNode) {
+//        FuncRParams → Exp { ',' Exp }
+        for (ExpNode expNode : funcRParamsNode.expNodes) {
+            visitExp(expNode);
+        }
     }
+
 
     private void visitFunctionOrVariable(IdentNode ident, FuncRParamsNode funcRParamsNode) {
         // 根据你的程序的具体实现，这里可能需要处理函数调用或变量访问
