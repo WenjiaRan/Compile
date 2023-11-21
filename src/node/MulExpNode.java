@@ -5,7 +5,7 @@ import utils.IOUtils;
 import java.util.List;
 
 public class MulExpNode {
-    //MulExp → UnaryExp | MulExp ('*' | '/' | '%') UnaryExp
+    //MulExp → UnaryExp |UnaryExp ('*' | '/' | '%')   MulExp
     // 消除左递归
     // MulExp → UnaryExp [('*' | '/' | '%') MulExp]
     public UnaryExpNode unaryExpNode;

@@ -618,7 +618,7 @@ public class Parser {
         return new FuncRParamsNode(expNodeList,commaTokenList);
     }
     public MulExpNode MulExp(){
-        // MulExp → UnaryExp | MulExp ('*' | '/' | '%') UnaryExp
+        // MulExp → UnaryExp | UnaryExp ('*' | '/' | '%')  MulExp
         // MulExp → UnaryExp [('*' | '/' | '%') MulExp]
         UnaryExpNode unaryExpNode=UnaryExp();
         Token token=null;

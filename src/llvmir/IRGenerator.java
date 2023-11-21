@@ -13,6 +13,7 @@ import token.TokenType;
 import utils.Triple;
 
 public class IRGenerator {
+//    public static String saveOp=null;
     public static Boolean shouldAddLoad;
     public static Integer copyRegNum;//保存全局regNum的值
 //    public static Integer regNum;
@@ -161,6 +162,7 @@ public class IRGenerator {
             visitFuncDef(funcDefNode);
             restoreRegNum();
         }
+        isGlobal=false;
         visitMainFuncDef(compUnitNode.mainFuncDefNode);
     }
 
@@ -453,6 +455,9 @@ public class IRGenerator {
         int i=0;
         for(BlockItemNode blockItemNode:blockNode.blockItemNodes){
             i++;
+            saveValue=null;
+            saveOp=null;
+            tmpValue=null;
             llvmir.append(findIndentation());
 
             visitBlockItem(blockItemNode);
@@ -587,38 +592,45 @@ public class IRGenerator {
 
     private void visitExp(ExpNode expNode) {
         //Exp         → AddExp
-
+        saveOp=null;
+        saveValue=null;
+        tmpValue=null;
         visitAdd(expNode.addExpNode);
     }
 
     private void visitAdd(AddExpNode addExpNode) {
         isInExp=true;
         if (isGlobal) {
+            Integer value = saveValue;
+            String op = saveOp;
+            saveOp=null;
+            saveValue = null;
             this.visitMulExp(addExpNode.mulExpNode);
+            if(value!=null) {
+                saveValue = calculate(op, value, saveValue);
+            }
             if (addExpNode.addExpNode != null) {
-                Integer tmpValue = saveValue;
-                saveValue = null;
-                this.visitAdd(addExpNode.addExpNode);
-                if (saveValue != null) {
-                    saveOp = addExpNode.operation.content;
-                    saveValue = this.calculate(saveOp, tmpValue, saveValue);
+                if (addExpNode.operation.type == TokenType.PLUS) {
+                    saveOp = "add";
+                } else if (addExpNode.operation.type == TokenType.MINU) {
+                    saveOp = "sub";
                 }
+                this.visitAdd(addExpNode.addExpNode);
+//                if (saveValue != null) {
+//                    saveOp = addExpNode.operation.content;
+//                    saveValue = this.calculate(saveOp, tmpValue, saveValue);
+//                }
             }
         }
         else {
             // 处理左侧的乘法表达式
+            String leftValue= tmpValue;
+            String llvmOp = saveOp;
+            saveOp=null;
+            tmpValue = null;
             visitMulExp(addExpNode.mulExpNode);
-            String leftValue = tmpValue; // 保存左侧表达式的结果
-
-            // 如果有右侧加法表达式，递归处理
-            if (addExpNode.addExpNode != null) {
-                visitAdd(addExpNode.addExpNode);
-                String rightValue = tmpValue; // 保存右侧表达式的结果
-
-                // 生成LLVM IR代码
-                String llvmOp = addExpNode.operation.getType() == TokenType.PLUS ? "add" : "sub";
-                // 如果要运算的是全局变量, 直接取出值, 全局变量肯定知道值
-                // 如果直接是数, 就不做处理!
+            String rightValue = tmpValue; // 保存左侧表达式的结果
+            if (leftValue != null) {
                 if(leftValue.matches("^-?\\d+$")){
 
                 }else{
@@ -658,8 +670,25 @@ public class IRGenerator {
                         .append(leftValue).append(", ").append(rightValue)
                         .append("\n");
                 tmpValue = "%" + tmpVarNum; // 更新tmpValue为新的临时变量
+
+            }
+            // 如果有右侧加法表达式，递归处理
+            if (addExpNode.addExpNode != null) {
+                if (addExpNode.operation.type == TokenType.PLUS) {
+                    saveOp = "add";
+                } else if (addExpNode.operation.type == TokenType.MINU) {
+                    saveOp = "sub";
+                }
+                visitAdd(addExpNode.addExpNode);
+//                String rightValue = tmpValue; // 保存右侧表达式的结果
+//
+//                // 生成LLVM IR代码
+//                String llvmOp = addExpNode.operation.getType() == TokenType.PLUS ? "add" : "sub";
+                // 如果要运算的是全局变量, 直接取出值, 全局变量肯定知道值
+                // 如果直接是数, 就不做处理!
+
             } else {
-                tmpValue = leftValue; // 没有右侧表达式，直接使用左侧结果
+                //tmpValue = leftValue; // 没有右侧表达式，直接使用左侧结果
 //                llvmir.append("%").append(regNum++).append(" = ")
 //                        .append("add").append(" i32 ")
 //                        .append(leftValue).append(", ").append("0")
@@ -679,37 +708,42 @@ public class IRGenerator {
     private void visitMulExp(MulExpNode mulExpNode) {
         //        MulExp     → UnaryExp |UnaryExp ('*' | '/' | '%') MulExp
         if (isGlobal) {
+            Integer value = saveValue;
+            String op = saveOp;
+            saveOp=null;
+            saveValue = null;
             this.visitUnaryExp(mulExpNode.unaryExpNode);
-            if (mulExpNode.mulExpNode != null) {
-                Integer tmpValue = saveValue;
-                saveValue = null;
-                this.visitMulExp(mulExpNode.mulExpNode);
-                if (saveValue != null) {
-                    saveOp = mulExpNode.operation.content;
-                    saveValue = this.calculate(saveOp, tmpValue, saveValue);
-                    saveOp = null;
-                }
+            if(value!=null) {
+                saveValue = calculate(op, value, saveValue);
             }
-        }else {
-            // 处理左侧的一元表达式
-            visitUnaryExp(mulExpNode.unaryExpNode);
-            String leftValue = tmpValue; // 保存左侧表达式的结果
-
-            // 如果有右侧乘法表达式，递归处理
             if (mulExpNode.mulExpNode != null) {
-                visitMulExp(mulExpNode.mulExpNode);
-                String rightValue = tmpValue; // 保存右侧表达式的结果
-
-                // 生成LLVM IR代码
-                String llvmOp;
-                if (mulExpNode.operation.getType() == TokenType.MULT) {
-                    llvmOp = "mul";
-                } else if (mulExpNode.operation.getType() == TokenType.DIV) {
-                    llvmOp = "sdiv";
-                } else {
-                    llvmOp = "srem";
+//                Integer tmpValue = saveValue;
+//                saveValue = null;
+                if (mulExpNode.operation.type == TokenType.MULT) {
+                    saveOp = "mul";
+                } else if (mulExpNode.operation.type == TokenType.DIV) {
+                    saveOp = "sdiv";
+                }else if(mulExpNode.operation.type == TokenType.MOD) {
+                    saveOp="srem";
                 }
-                // 如果直接是数, 就不做处理!
+
+                this.visitMulExp(mulExpNode.mulExpNode);
+//                if (saveValue != null) {
+//                    saveOp = mulExpNode.operation.content;
+//                    saveValue = this.calculate(saveOp, tmpValue, saveValue);
+//                    saveOp = null;
+//                }
+            }
+        }
+        else {
+            // 处理左侧的一元表达式, 注意你的语法树改写过文法, 现在要调整回来!!!
+            String leftValue= tmpValue;
+            String llvmOp = saveOp;
+            saveOp=null;
+            tmpValue = null;
+            visitUnaryExp(mulExpNode.unaryExpNode);
+            String rightValue =tmpValue;
+            if (leftValue != null) {
                 if(leftValue.matches("^-?\\d+$")){
 
                 }else{
@@ -749,8 +783,36 @@ public class IRGenerator {
                         .append(leftValue).append(", ").append(rightValue)
                         .append("\n");
                 tmpValue = "%" + tmpVarNum; // 更新tmpValue为新的临时变量
-            } else {
-                tmpValue = leftValue; // 没有右侧表达式，直接使用左侧结果
+            }
+            //String leftValue = tmpValue; // 保存左侧表达式的结果
+
+            // 如果有右侧乘法表达式，递归处理
+            if (mulExpNode.mulExpNode != null) {
+                if (mulExpNode.operation.type == TokenType.MULT) {
+                    saveOp = "mul";
+                } else if (mulExpNode.operation.type == TokenType.DIV) {
+                    saveOp = "sdiv";
+                }else if(mulExpNode.operation.type == TokenType.MOD) {
+                    saveOp="srem";
+                }
+                visitMulExp(mulExpNode.mulExpNode);
+
+                //String rightValue = tmpValue; // 保存右侧表达式的结果
+
+                // 生成LLVM IR代码
+//                String llvmOp;
+//                if (mulExpNode.operation.getType() == TokenType.MULT) {
+//                    llvmOp = "mul";
+//                } else if (mulExpNode.operation.getType() == TokenType.DIV) {
+//                    llvmOp = "sdiv";
+//                } else {
+//                    llvmOp = "srem";
+//                }
+                // 如果直接是数, 就不做处理!
+
+            }
+            else {
+                //tmpValue = leftValue; // 没有右侧表达式，直接使用左侧结果
             }
         }
     }

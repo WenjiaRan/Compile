@@ -1,6 +1,17 @@
+int f1(int x, int y){
+    return x+2*y;
+}
+
+int f2(int x, int y){
+    int a=x;
+    int b=y*a;
+    return a+b;
+}
+
+int f3(int x){
+    return x*x;
+}
 
 int main(){
- int a=4*13/9;
-
- return a;
+ return 4*13/9;
 }
