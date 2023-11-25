@@ -1,17 +1,19 @@
-int f1(int x, int y){
-    return x+2*y;
-}
-
-int f2(int x, int y){
-    int a=x;
-    int b=y*a;
-    return a+b;
-}
-
-int f3(int x){
-    return x*x;
-}
-
 int main(){
- return 4*13/9;
+    int a=1,b=2;
+    if(a<2||a>b&&a<b){
+        b=4;
+    }
+
+    return b;
 }
+//TODO: 拉链回填有问题!!!LOrExp值为1或者LAndExp值为0,就可以跳转!
+//TODO: 先做一个正常跳转, 再改!!!!!
+//%7 = icmp slt  i32 %5, 2
+//%8 = icmp sgt  i32 %10, %11
+//%9 = icmp slt  i32 %15, %16
+//%10 = and %8, %9
+//%11 = or %7, %10
+!!!
+//<result> = and <ty> <op1>, <op2>!!!
+//对于连或来说，只要其中一个LOrExp或最后一个LAndExp为1，即可直接跳转Stmt1。
+//对于连与来说，只要其中一个LAndExp或最后一个EqExp为0，则直接进入下一个LOrExp。如果当前为连或的最后一项，则直接跳转Stmt2（有else）或BasicBlock3（没else）
