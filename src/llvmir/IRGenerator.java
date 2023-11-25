@@ -983,7 +983,22 @@ public class IRGenerator {
                 leftValue="%" + tmpVarNum;
                 isRelation=false;
             }
-            int tmpVarNum = getNextTmpVarNum(); // 获取下一个临时变量编号
+            int tmpVarNum ; // 获取下一个临时变量编号
+            if (regHash.containsKey(leftValue)) {
+                //说明是i1,需要转换成i32
+                tmpVarNum = getNextTmpVarNum();
+                llvmir.append("%").append(tmpVarNum).append(" = ")
+                        .append("zext i1 "+leftValue+" to i32\n");
+                leftValue="%"+tmpVarNum;
+            }
+            if (regHash.containsKey(rightValue)) {
+                //说明是i1,需要转换成i32
+                tmpVarNum = getNextTmpVarNum();
+                llvmir.append("%").append(tmpVarNum).append(" = ")
+                        .append("zext i1 "+rightValue+" to i32\n");
+                rightValue="%"+tmpVarNum;
+            }
+            tmpVarNum = getNextTmpVarNum();
             regHash.put("%" + tmpVarNum, 1);
             llvmir.append("%").append(tmpVarNum).append(" = ")
                     .append(llvmOp).append(" i32 ")
@@ -1047,12 +1062,29 @@ public class IRGenerator {
                     }
                 }
             }
-            int tmpVarNum = getNextTmpVarNum(); // 获取下一个临时变量编号
+            int tmpVarNum ; // 获取下一个临时变量编号
+            if (regHash.containsKey(leftValue)) {
+                //说明是i1,需要转换成i32
+                tmpVarNum = getNextTmpVarNum();
+                llvmir.append("%").append(tmpVarNum).append(" = ")
+                        .append("zext i1 "+leftValue+" to i32\n");
+                leftValue="%"+tmpVarNum;
+            }
+            if (regHash.containsKey(rightValue)) {
+                //说明是i1,需要转换成i32
+                tmpVarNum = getNextTmpVarNum();
+                llvmir.append("%").append(tmpVarNum).append(" = ")
+                        .append("zext i1 "+rightValue+" to i32\n");
+                rightValue="%"+tmpVarNum;
+            }
+            tmpVarNum = getNextTmpVarNum();
+
             regHash.put("%" + tmpVarNum, 1);
             llvmir.append("%").append(tmpVarNum).append(" = ")
                     .append(llvmOp).append(" i32 ")
                     .append(leftValue).append(", ").append(rightValue)
                     .append("\n");
+
             tmpValue = "%" + tmpVarNum;
 
 
