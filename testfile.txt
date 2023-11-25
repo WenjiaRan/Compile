@@ -1,19 +1,17 @@
-int main(){
-    int a=1,b=2;
-    if(a<2||a>b&&a<b){
-        b=4;
-    }
-
-    return b;
+int a=1;
+int func(){
+    a=2;return 1;
 }
-//TODO: 拉链回填有问题!!!LOrExp值为1或者LAndExp值为0,就可以跳转!
-//TODO: 先做一个正常跳转, 再改!!!!!
-//%7 = icmp slt  i32 %5, 2
-//%8 = icmp sgt  i32 %10, %11
-//%9 = icmp slt  i32 %15, %16
-//%10 = and %8, %9
-//%11 = or %7, %10
-!!!
-//<result> = and <ty> <op1>, <op2>!!!
-//对于连或来说，只要其中一个LOrExp或最后一个LAndExp为1，即可直接跳转Stmt1。
-//对于连与来说，只要其中一个LAndExp或最后一个EqExp为0，则直接进入下一个LOrExp。如果当前为连或的最后一项，则直接跳转Stmt2（有else）或BasicBlock3（没else）
+
+int func2(){
+    a=4;return 10;
+}
+int func3(){
+    a=3;return 0;
+}
+int main(){
+    if(0||func()&&func3()||func2()){printf("%d--1",a);}
+    if(1||func3()){printf("%d--2",a);}
+    if(0||func3()||func()<func2()){printf("%d--3",a);}
+    return 0;
+}

@@ -14,6 +14,9 @@ import utils.Triple;
 
 public class IRGenerator {
     //    public static String saveOp=null;
+    public HashMap<String,Integer> regHash=new HashMap<>();//reg的名字和存的值的类型1OR32, 为了方便起见, 只存类型为1bit的
+    public Integer tmpAns;
+    public Boolean isRelation=false;
     public Boolean isIfCondEnd=false;
     public StmtNode globalIfStmt=null;
     public static Boolean isInBranch=false;//如下面的注释的情况
@@ -619,30 +622,61 @@ public class IRGenerator {
         }
         else if (stmtNode.stmtType == StmtNode.StmtType.If) {
             //Stmt    → 'if' '(' Cond ')' Stmt [ 'else' Stmt ]
-            globalIfStmt=stmtNode;
             if (stmtNode.elseToken == null) {
-
                 visitCond(stmtNode.condNode);
+
                 int prevReg=regNum-1;
+                if (!regHash.containsKey("%" + prevReg)) {
+                    llvmir.append("%" + regNum + " = icmp ne i32 " + "%" + prevReg + ", 0\n");
+                    regHash.put("%" + regNum, 1);
+                    regNum++;
+                    prevReg=regNum-1;
+                }
                 llvmir.append("br i1 ").append("%").append(prevReg + ",  label ")
                         .append("%" + regNum).append(", label ").
                         append("不确定" + "\n\n" + regNum++ + ":\n");
-                prevReg=regNum-1;
-                String huitian="%" + prevReg;
+                visitStmt(stmtNode.stmtNodes.get(0));
+                llvmir.append("br label %" + regNum + "\n\n" + regNum + ":\n");
+                String huitian="%" + regNum;
+                regNum++;
                 int index = llvmir.indexOf("不确定");
                 if (index != -1) {
                     llvmir.replace(index, index + "不确定".length(), huitian);
                 }
-                visitStmt(stmtNode.stmtNodes.get(0));
             }
-            //if结束,跳出来,
+            else{
+                visitCond(stmtNode.condNode);
+                int prevReg=regNum-1;
+                if (!regHash.containsKey("%" + prevReg)) {
+                    llvmir.append("%" + regNum + " = icmp ne i32 " + "%" + prevReg + ", 0\n");
+                    regHash.put("%" + regNum, 1);
+                    regNum++;
+                    prevReg=regNum-1;
+                }
+                llvmir.append("br i1 ").append("%").append(prevReg + ",  label ")
+                        .append("%" + regNum).append(", label ").
+                        append("不确定" + "\n\n" + regNum++ + ":\n");
+                //上面的不确定是else的位置
+                visitStmt(stmtNode.stmtNodes.get(0));
+                // if结束,跳出ifStmt!
+                llvmir.append("br label 不确定" + "\n\n" + regNum + ":\n");
 
-            llvmir.append("br label %" + regNum + "\n\n" + regNum + ":\n");
-            String huitian="%" + regNum;
-            regNum++;
-            int index = llvmir.indexOf("不确定");
-            if (index != -1) {
-                llvmir.replace(index, index + "不确定".length(), huitian);
+                //开始else, else确定了,开始回填
+                String huitian="%" + regNum;
+                int index = llvmir.indexOf("不确定");
+                if (index != -1) {
+                    llvmir.replace(index, index + "不确定".length(), huitian);
+                }
+                regNum++;
+                visitStmt(stmtNode.stmtNodes.get(1));
+                //else结束!
+                llvmir.append("br label %" + regNum + "\n\n" + regNum + ":\n");
+                huitian="%" + regNum;
+                regNum++;
+                index = llvmir.indexOf("不确定");
+                if (index != -1) {
+                    llvmir.replace(index, index + "不确定".length(), huitian);
+                }
             }
         }
 
@@ -650,30 +684,123 @@ public class IRGenerator {
 
     private void visitCond(CondNode condNode) {
         //Cond    → LOrExp
+        saveOp = null;
+        saveValue = null;
+        tmpValue = null;
         visitLOrExp(condNode.lOrExpNode);
     }
 
     private void visitLOrExp(LOrExpNode lOrExpNode) {
         //LOrExp → LAndExp | LAndExp '||'   LOrExp #TODO:注意这里顺序交换了
+
         String leftValue = tmpValue;
+        LOrExpNode current=lOrExpNode;
+
+        Integer leftAns=tmpAns;//记录是否为1
         String llvmOp = saveOp;
         saveOp = null;
         tmpValue = null;
-
-        if (lOrExpNode.lOrExpNode != null) {
-            isOr=true;
+        if (lOrExpNode != null && lOrExpNode.lAndExpNode != null) {
+            LAndExpNode andNode = lOrExpNode.lAndExpNode;
+            if (andNode.eqExpNode != null) {
+                EqExpNode eqNode = andNode.eqExpNode;
+                if (eqNode.relExpNode != null) {
+                    RelExpNode relNode = eqNode.relExpNode;
+                    if (relNode.addExpNode != null) {
+                        AddExpNode addNode = relNode.addExpNode;
+                        if (addNode.mulExpNode != null) {
+                            MulExpNode mulNode = addNode.mulExpNode;
+                            if (mulNode.unaryExpNode != null) {
+                                UnaryExpNode unaryNode = mulNode.unaryExpNode;
+                                if (unaryNode.primaryExpNode != null) {
+                                    PrimaryExpNode primaryNode = unaryNode.primaryExpNode;
+                                    if (primaryNode.numberNode != null) {
+                                        NumberNode numberNode = primaryNode.numberNode;
+                                        if (numberNode.getToken() != null && numberNode.getToken().content != null) {
+                                            try {
+                                                leftAns = Integer.parseInt(numberNode.getToken().content);
+                                            } catch (NumberFormatException e) {
+                                                leftAns=null;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         visitLAndExp(lOrExpNode.lAndExpNode);
-        if (lOrExpNode.lOrExpNode != null) {
-            int tmpVarNum = getNextTmpVarNum();
-            llvmir.append("br i1 ").append("%").append(tmpVarNum + ",  label ")
-                       .append("不确定").append(", label ").
-                       append("%" + regNum + "\n\n" + regNum++ + ":\n");
+        String rightValue = tmpValue;
+        if (leftAns != null) {
+            if (leftAns == 1) {
+                //对于连或来说，只要其中一个LOrExp或最后一个LAndExp为1，即可直接跳转Stmt1。
+                tmpAns=null;
+                return;
+            }
         }
-        isOr=false;
-        String rightValue = tmpValue; // 保存左侧表达式的结果
+
+        if (leftValue != null) {
+            if (leftValue.matches("^-?\\d+$")) {
+
+            }
+            else {
+                String haha = getValueFromRegiName(leftValue);
+                if (haha != null) {
+                    leftValue = haha;
+                }
+                else {
+                    // 指针才需要另开变量赋值!
+                    if (leftValue.charAt(0) == '*') {
+                        llvmir.append("%").append(regNum).append(" = ").append("load i32, i32").append(leftValue).append("\n");
+                        leftValue = "%" + regNum;
+                        regNum++;
+                    }
+
+                }
+            }
+            if (rightValue.matches("^-?\\d+$")) {
+
+            }
+            else {
+                String ahah = getValueFromRegiName(rightValue);
+
+                if (ahah != null) {
+                    rightValue = ahah;
+                }
+                else {
+                    // 指针才需要另开变量赋值!
+                    if (rightValue.charAt(0) == '*') {
+                        llvmir.append("%").append(regNum).append(" = ").append("load i32, i32").append(rightValue).append("\n");
+                        rightValue = "%" + regNum;
+                        regNum++;
+                    }
+                }
+            }
+            if (!regHash.containsKey(leftValue)) {
+                llvmir.append("%" + regNum + " = icmp ne i32 " + leftValue + ", 0\n");
+                regHash.put("%" + regNum, 1);
+                leftValue="%"+regNum;
+                regNum++;
+            }
+            if (!regHash.containsKey(rightValue)) {
+                llvmir.append("%" + regNum + " = icmp ne i32 "+ rightValue + ", 0\n");
+                regHash.put("%" + regNum, 1);
+                rightValue="%"+regNum;
+                regNum++;
+            }
+            int tmpVarNum = getNextTmpVarNum();
+            llvmir.append("%").append(tmpVarNum).append(" = ")
+                    .append(llvmOp).append(" i1 ")
+                    .append(leftValue).append(", ").append(rightValue)
+                    .append("\n");
+            regHash.put("%" + tmpVarNum, 1);
+            tmpValue = "%" + tmpVarNum; // 更新tmpValue为新的临时变量
+
+        }
         if (lOrExpNode.lOrExpNode != null) {
-            //
+            saveOp="or";
             visitLOrExp(lOrExpNode.lOrExpNode);
         }
     }
@@ -681,24 +808,123 @@ public class IRGenerator {
     private void visitLAndExp(LAndExpNode lAndExpNode) {
         //// LAndExp -> EqExp | EqExp '&&' LAndExp
         String leftValue = tmpValue;
+        Integer leftAns=tmpAns;
         String llvmOp = saveOp;
         saveOp = null;
         tmpValue = null;
-        if (lAndExpNode.lAndExpNode != null) {
-            isAnd=true;
-        }
+
+            LAndExpNode andNode = lAndExpNode;
+            if (andNode.eqExpNode != null) {
+                EqExpNode eqNode = andNode.eqExpNode;
+                if (eqNode.relExpNode != null) {
+                    RelExpNode relNode = eqNode.relExpNode;
+                    if (relNode.addExpNode != null) {
+                        AddExpNode addNode = relNode.addExpNode;
+                        if (addNode.mulExpNode != null) {
+                            MulExpNode mulNode = addNode.mulExpNode;
+                            if (mulNode.unaryExpNode != null) {
+                                UnaryExpNode unaryNode = mulNode.unaryExpNode;
+                                if (unaryNode.primaryExpNode != null) {
+                                    PrimaryExpNode primaryNode = unaryNode.primaryExpNode;
+                                    if (primaryNode.numberNode != null) {
+                                        NumberNode numberNode = primaryNode.numberNode;
+                                        if (numberNode.getToken() != null && numberNode.getToken().content != null) {
+                                            try {
+                                                leftAns = Integer.parseInt(numberNode.getToken().content);
+                                            } catch (NumberFormatException e) {
+                                                leftAns=null;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         visitEqExp(lAndExpNode.eqExpNode);
         isAnd=false;
-        if (lAndExpNode.lAndExpNode != null) {
-            int tmpVarNum = getNextTmpVarNum();
-            llvmir.append("br i1 ").append("%").append(tmpVarNum + ",  label ")
-                        .append("%" + regNum).append(", label ").
-                        append("不确定" + "\n\n" + regNum++ + ":\n");
-        }
         String rightValue = tmpValue;
+        if(leftAns!=null){
+            if (leftAns == 0) {
+                tmpAns=null;
+                return;
+            }
+        }
+
+        if (leftValue != null) {
+            if (leftValue.matches("^-?\\d+$")) {
+
+            }
+            else {
+                String haha = getValueFromRegiName(leftValue);
+                if (haha != null) {
+                    leftValue = haha;
+                }
+                else {
+                    // 指针才需要另开变量赋值!
+                    if (leftValue.charAt(0) == '*') {
+                        llvmir.append("%").append(regNum).append(" = ").append("load i32, i32").append(leftValue).append("\n");
+                        leftValue = "%" + regNum;
+                        regNum++;
+                    }
+
+                }
+            }
+            if (rightValue.matches("^-?\\d+$")) {
+
+            }
+            else {
+                String ahah = getValueFromRegiName(rightValue);
+
+                if (ahah != null) {
+                    rightValue = ahah;
+                }
+                else {
+                    // 指针才需要另开变量赋值!
+                    if (rightValue.charAt(0) == '*') {
+                        llvmir.append("%").append(regNum).append(" = ").append("load i32, i32").append(rightValue).append("\n");
+                        rightValue = "%" + regNum;
+                        regNum++;
+                    }
+                }
+            }
+//            int tmpVarNum = getNextTmpVarNum(); // 获取下一个临时变量编号
+//            llvmir.append("%").append(tmpVarNum).append(" = ")
+//                    .append("icmp ne i32 ").append(leftValue +", 0"+ "\n");
+//            leftValue="%"+tmpVarNum;
+//            tmpVarNum = getNextTmpVarNum();
+//            llvmir.append("%").append(tmpVarNum).append(" = ")
+//                    .append("icmp ne i32 ").append(rightValue +", 0"+ "\n");
+//            rightValue="%"+tmpVarNum;
+
+
+            if (!regHash.containsKey(leftValue)) {
+                llvmir.append("%" + regNum + " = icmp ne i32 "  + leftValue + ", 0\n");
+                regHash.put("%" + regNum, 1);
+                leftValue="%"+regNum;
+                regNum++;
+            }
+            if (!regHash.containsKey(rightValue)) {
+                llvmir.append("%" + regNum + " = icmp ne i32 "  + rightValue + ", 0\n");
+                regHash.put("%" + regNum, 1);
+                rightValue="%"+regNum;
+                regNum++;
+            }
+            int tmpVarNum = getNextTmpVarNum();
+            llvmir.append("%").append(tmpVarNum).append(" = ")
+                    .append(llvmOp).append(" i1 ")
+                    .append(leftValue).append(", ").append(rightValue)
+                    .append("\n");
+            regHash.put("%" + tmpVarNum, 1);
+            tmpValue = "%" + tmpVarNum; // 更新tmpValue为新的临时变量
+
+        }
+
 
         if (lAndExpNode.lAndExpNode != null) {
-            //
+            saveOp="and";
             visitLAndExp(lAndExpNode.lAndExpNode);
         }
     }
@@ -711,50 +937,60 @@ public class IRGenerator {
         tmpValue = null;
         visitRelExp(eqExpNode.relExpNode);
         String rightValue = tmpValue;
-//        if (leftValue != null){
-//            if (leftValue.matches("^-?\\d+$")) {
-//
-//            }
-//            else {
-//                String haha = getValueFromRegiName(leftValue);
-//                if (haha != null) {
-//                    leftValue = haha;
-//                }
-//                else {
-//                    // 指针才需要另开变量赋值!
-//                    if (leftValue.charAt(0) == '*') {
-//                        llvmir.append("%").append(regNum).append(" = ").append("load i32, i32").append(leftValue).append("\n");
-//                        leftValue = "%" + regNum;
-//                        regNum++;
-//                    }
-//
-//                }
-//            }
-//            if (rightValue.matches("^-?\\d+$")) {
-//
-//            }
-//            else {
-//                String ahah = getValueFromRegiName(rightValue);
-//
-//                if (ahah != null) {
-//                    rightValue = ahah;
-//                }
-//                else {
-//                    // 指针才需要另开变量赋值!
-//                    if (rightValue.charAt(0) == '*') {
-//                        llvmir.append("%").append(regNum).append(" = ").append("load i32, i32").append(rightValue).append("\n");
-//                        rightValue = "%" + regNum;
-//                        regNum++;
-//                    }
-//                }
-//            }
-//            int tmpVarNum = getNextTmpVarNum(); // 获取下一个临时变量编号
-//            llvmir.append("%").append(tmpVarNum).append(" = ")
-//                    .append(llvmOp).append(" i32 ")
-//                    .append(leftValue).append(", ").append(rightValue)
-//                    .append("\n");
-//            tmpValue = "%" + tmpVarNum;
-//        }
+        if (leftValue != null){
+            if (leftValue.matches("^-?\\d+$")) {
+
+            }
+            else {
+                String haha = getValueFromRegiName(leftValue);
+                if (haha != null) {
+                    leftValue = haha;
+                }
+                else {
+                    // 指针才需要另开变量赋值!
+                    if (leftValue.charAt(0) == '*') {
+                        llvmir.append("%").append(regNum).append(" = ").append("load i32, i32").append(leftValue).append("\n");
+                        leftValue = "%" + regNum;
+                        regNum++;
+                    }
+
+                }
+            }
+            if (rightValue.matches("^-?\\d+$")) {
+
+            }
+            else {
+                String ahah = getValueFromRegiName(rightValue);
+
+                if (ahah != null) {
+                    rightValue = ahah;
+                }
+                else {
+                    // 指针才需要另开变量赋值!
+                    if (rightValue.charAt(0) == '*') {
+                        llvmir.append("%").append(regNum).append(" = ").append("load i32, i32").append(rightValue).append("\n");
+                        rightValue = "%" + regNum;
+                        regNum++;
+                    }
+                }
+            }
+            if (isRelation) {
+                int tmpVarNum = getNextTmpVarNum(); // 获取下一个临时变量编号
+                llvmir.append("%").append(tmpVarNum).append(" = ")
+                        .append("zext i1 ")
+                        .append(leftValue).append(" to i32\n");
+                tmpValue = "%" + tmpVarNum;
+                leftValue="%" + tmpVarNum;
+                isRelation=false;
+            }
+            int tmpVarNum = getNextTmpVarNum(); // 获取下一个临时变量编号
+            regHash.put("%" + tmpVarNum, 1);
+            llvmir.append("%").append(tmpVarNum).append(" = ")
+                    .append(llvmOp).append(" i32 ")
+                    .append(leftValue).append(", ").append(rightValue)
+                    .append("\n");
+            tmpValue = "%" + tmpVarNum;
+        }
         if (eqExpNode.eqExpNode != null) {
             if (eqExpNode.operator.content == "==") {
                 saveOp="icmp eq ";
@@ -812,40 +1048,17 @@ public class IRGenerator {
                 }
             }
             int tmpVarNum = getNextTmpVarNum(); // 获取下一个临时变量编号
+            regHash.put("%" + tmpVarNum, 1);
             llvmir.append("%").append(tmpVarNum).append(" = ")
                     .append(llvmOp).append(" i32 ")
                     .append(leftValue).append(", ").append(rightValue)
                     .append("\n");
             tmpValue = "%" + tmpVarNum;
-            //
-//            if (isOr) {
-//                llvmir.append("br i1 ").append("%").append(tmpVarNum + ",  label ")
-//                        .append("不确定").append(", label ").
-//                        append("%" + regNum + "\n\n" + regNum++ + ":\n");
-//                isOr=false;
-//            }
-//            else if (isAnd) {
-//                llvmir.append("br i1 ").append("%").append(tmpVarNum + ",  label ")
-//                        .append("%" + regNum).append(", label ").
-//                        append("不确定" + "\n\n" + regNum++ + ":\n");
-//                isAnd = false;
-//            }
-//            else if (isInBranch) {
-//                llvmir.append("br i1 ").append("%").append(tmpVarNum + ",  label ")
-//                        .append("%" + regNum).append(", label ").
-//                        append("不确定" + "\n\n" + regNum++ + ":\n");
-//                isInBranch = false;
-//            }
-//            else if (isIfCondEnd) {
-//                llvmir.append("br i1 ").append("%").append(tmpVarNum + ",  label ")
-//                        .append("%" + regNum).append(", label ").
-//                        append("不确定" + "\n\n" + regNum++ + ":\n");
-//                isIfCondEnd=false;
-//            }
 
 
         }
         if (relExpNode.relExpNode != null) {
+            isRelation=true;
             if (relExpNode.operator.content == "<") {
                 saveOp = "icmp slt ";
             }
