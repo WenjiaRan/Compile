@@ -13,7 +13,11 @@ import token.TokenType;
 import utils.Triple;
 
 public class IRGenerator {
-    //    public static String saveOp=null;
+    public Boolean isReturn=false;
+    public  Boolean isElseBreak=false;
+    public Boolean isElseContinue=false;
+    public Boolean isContinue=false;
+    public  Boolean isBreak=false;
     public HashMap<String,Integer> regHash=new HashMap<>();//reg的名字和存的值的类型1OR32, 为了方便起见, 只存类型为1bit的
     public Integer tmpAns;
     public Boolean isRelation=false;
@@ -417,12 +421,14 @@ public class IRGenerator {
     }
 
     private void visitConstDef(ConstDefNode constDef) {
+        //ConstDef → Ident { '[' ConstExp ']' } '=' ConstInitVal
         //ConstDef     → Ident  '=' ConstInitVal
         String ident = constDef.identToken.content;
 
         //const int a=5;
         //@a = dso_local constant i32 5
         if (isGlobal) {
+
             visitConstInitVal(constDef.constInitValNode);
             put(constDef.identToken.content, new ArraySymbol(
                     constDef.identToken.content, true,
@@ -446,12 +452,7 @@ public class IRGenerator {
             llvmir.append("%").append(regNum).append(" = alloca i32\n");
             llvmir.append(findIndentation());
             int prevReg = regNum - 1;
-//            if (flag == 1) {
-//                llvmir.append("store i32 ").append(var).append(", i32* ").append("%").append(regNum++).append("\n");
-//            }
-//            else{
             llvmir.append("store i32 ").append("%" + prevReg).append(", i32* ").append("%").append(regNum++).append("\n");
-//            }
         }
     }
 
@@ -486,7 +487,14 @@ public class IRGenerator {
             saveOp = null;
             tmpValue = null;
             llvmir.append(findIndentation());
-
+            if ((isContinue&&symbolTables.get(symbolTables.size() - 1).third == FuncSymbol.ReturnType.IF)
+                    ||(isElseContinue&&symbolTables.get(symbolTables.size() - 1).third == FuncSymbol.ReturnType.ELSE)) {
+                return;
+            }
+            if ((isBreak&&symbolTables.get(symbolTables.size() - 1).third == FuncSymbol.ReturnType.IF)
+                    ||(isElseBreak&&symbolTables.get(symbolTables.size() - 1).third == FuncSymbol.ReturnType.ELSE)) {
+                return;
+            }
             visitBlockItem(blockItemNode);
         }
         //TODO:必须要是函数!
@@ -507,6 +515,7 @@ public class IRGenerator {
 
     private void visitBlockItem(BlockItemNode blockItemNode) {
         //BlockItem → Decl | Stmt
+        isReturn=false;//TODO: is it right???
         if (blockItemNode.declNode != null) {
             visitDecl(blockItemNode.declNode);
         }
@@ -524,6 +533,7 @@ public class IRGenerator {
         //LVal '=' 'getint''('')'';'
         //     | 'printf''('FormatString{','Exp}')'';'
         if (stmtNode.stmtType == StmtNode.StmtType.Return) {
+            isReturn=true;
             int isVoid = 1;
             if (stmtNode.expNode != null) {
                 isVoid = 0;
@@ -540,9 +550,8 @@ public class IRGenerator {
             }
         }
         else if (stmtNode.stmtType == StmtNode.StmtType.LValAssignExp) {
-            visitExp(stmtNode.expNode);
-            Integer newValue = saveValue;
-            // 有问题!!!
+            //TODO: 有问题!!!?
+
             // int a=1000;
             // int main(){
             //        a=getint(); 此时全局变量也不确定了!!!
@@ -556,16 +565,10 @@ public class IRGenerator {
 //            if (newValue != null) {
 //
 //            }
+            visitExp(stmtNode.expNode);
             changeValueFromVar(stmtNode.lValNode.ident.content, null);
-
-//            llvmir.append("%").append(regNum).append(" = add i32 0, ").append(regNum-1).append("\n");
-//            llvmir.append(findIndentation());
-//            regNum++;
             int prevReg = regNum - 1;
-//            llvmir.append("")
             llvmir.append("store i32 ").append("%" + prevReg + ", i32").append(getRegiNameFromVar(stmtNode.lValNode.ident.content)).append("\n");
-
-//            llvmir.append("store i32 ").append(saveValue).append(", i32* ").append("%").append(regNum++).append("\n");
             saveValue = null;
         }
         else if (stmtNode.stmtType == StmtNode.StmtType.Block) {
@@ -635,11 +638,33 @@ public class IRGenerator {
                 llvmir.append("br i1 ").append("%").append(prevReg + ",  label ")
                         .append("%" + regNum).append(", label ").
                         append("不确定" + "\n\n" + regNum++ + ":\n");
+
+                addSymbolTable(false, FuncSymbol.ReturnType.IF);
                 visitStmt(stmtNode.stmtNodes.get(0));
-                llvmir.append("br label %" + regNum + "\n\n" + regNum + ":\n");
+                removeSymbolTable();
+                if (isReturn) {
+                    isReturn=false;
+                    llvmir.append("\n\n" + regNum + ":\n");
+                }
+                else{
+                    if (isBreak) {
+                        llvmir.append("\n\n" + regNum + ":\n");
+                    }
+                    else{
+                        if (isContinue) {
+                            llvmir.append("\n\n" + regNum + ":\n");
+                        }
+                        else{
+                            llvmir.append("br label %" + regNum + "\n\n" + regNum + ":\n");
+                        }
+                    }
+                }
+
+
+
                 String huitian="%" + regNum;
                 regNum++;
-                int index = llvmir.indexOf("不确定");
+                int index = llvmir.lastIndexOf("不确定");
                 if (index != -1) {
                     llvmir.replace(index, index + "不确定".length(), huitian);
                 }
@@ -655,31 +680,163 @@ public class IRGenerator {
                 }
                 llvmir.append("br i1 ").append("%").append(prevReg + ",  label ")
                         .append("%" + regNum).append(", label ").
-                        append("不确定" + "\n\n" + regNum++ + ":\n");
+                        append("跳else" + "\n\n" + regNum++ + ":\n");
                 //上面的不确定是else的位置
+                addSymbolTable(false, FuncSymbol.ReturnType.IF);
                 visitStmt(stmtNode.stmtNodes.get(0));
+                removeSymbolTable();
                 // if结束,跳出ifStmt!
-                llvmir.append("br label 不确定" + "\n\n" + regNum + ":\n");
+                if (isReturn) {
+                    isReturn=false;
+                    llvmir.append("\n\n" + regNum + ":\n");
+                }
+                else{
+                    if (isBreak) {
+                        llvmir.append("\n\n" + regNum + ":\n");
+                    }
+                    else{
+                        if (isContinue) {
+                            llvmir.append("\n\n" + regNum + ":\n");
+                        }
+                        else{
+                            llvmir.append("br label 跳出if" + "\n\n" + regNum + ":\n");
+                        }
+                    }
+                }
+
 
                 //开始else, else确定了,开始回填
+                //TODO: 回填应该是 从后往前找吧!
                 String huitian="%" + regNum;
-                int index = llvmir.indexOf("不确定");
+                int index = llvmir.lastIndexOf("跳else");
                 if (index != -1) {
-                    llvmir.replace(index, index + "不确定".length(), huitian);
+                    llvmir.replace(index, index + "跳else".length(), huitian);
                 }
                 regNum++;
+                addSymbolTable(false, FuncSymbol.ReturnType.ELSE);
                 visitStmt(stmtNode.stmtNodes.get(1));
+                removeSymbolTable();
                 //else结束!
-                llvmir.append("br label %" + regNum + "\n\n" + regNum + ":\n");
+                if (isReturn) {
+                    isReturn=false;
+                    llvmir.append("\n\n" + regNum + ":\n");
+                }
+                else{
+                    if (isElseBreak) {
+                        llvmir.append("\n\n" + regNum + ":\n");
+                    }
+                    else{
+                        if (isElseContinue) {
+                            llvmir.append("\n\n" + regNum + ":\n");
+                        }
+                        else{
+                            llvmir.append("br label %" + regNum + "\n\n" + regNum + ":\n");
+                        }
+                    }
+                }
+
+
+
                 huitian="%" + regNum;
                 regNum++;
-                index = llvmir.indexOf("不确定");
-                if (index != -1) {
-                    llvmir.replace(index, index + "不确定".length(), huitian);
+                if (!isContinue||isElseContinue) {
+                    index = llvmir.lastIndexOf("跳出if");
+                    if (index != -1) {
+                        llvmir.replace(index, index + "跳出if".length(), huitian);
+                    }
                 }
+
             }
         }
+        else if (stmtNode.stmtType == StmtNode.StmtType.For) {
+//            Stmt    → 'for' '(' [ForStmt1] ';' [Cond] ';' [ForStmt2] ')' Stmt
+//                    | 'break' ';'
+//                    | 'continue' ';'
+            if (stmtNode.forStmtNodes.get(0) != null) {
+                visitForStmt(stmtNode.forStmtNodes.get(0));
+            }
 
+            String condLable="%" + regNum;
+            llvmir.append("br label " + "%" + regNum + "\n\n" + regNum + ":\n");
+            regNum++;
+
+            if (stmtNode.condNode != null) {
+                visitCond(stmtNode.condNode);
+                int prevReg=regNum-1;
+                String stmtLable="%"+regNum;
+                if (!regHash.containsKey("%" + prevReg)) {
+                    llvmir.append("%" + regNum + " = icmp ne i32 " + "%" + prevReg + ", 0\n");
+                    regHash.put("%" + regNum, 1);
+                    regNum++;
+                    prevReg=regNum-1;
+                }
+                llvmir.append("br i1 ").append("%").append(prevReg + ",  label ")
+                        .append("%" + regNum).append(", label ").
+                        append("不确定" + "\n\n" + regNum++ + ":\n");
+            }
+
+
+
+            addSymbolTable(false, FuncSymbol.ReturnType.FOR);
+            visitStmt(stmtNode.stmtNode);
+
+            removeSymbolTable();
+
+            String for2Lable="%"+regNum;
+            if (isContinue) {
+                isContinue=false;
+                isElseContinue=false;
+                int index = llvmir.lastIndexOf("不确跳for2");
+                if (index!=-1) {
+                    llvmir.replace(index, index + "不确跳for2".length(), for2Lable);
+                }
+            }
+            llvmir.append("br label " + "%" + regNum + "\n\n" + regNum + ":\n");
+            regNum++;
+            if (stmtNode.forStmtNodes.get(1) != null) {
+                visitForStmt(stmtNode.forStmtNodes.get(1));
+            }
+            llvmir.append("br label " + condLable+"\n");
+            llvmir.append("\n\n" + regNum + ":\n");
+            String nextBlockLable="%"+regNum;
+            int index = llvmir.lastIndexOf("不确定");
+            if (index != -1) {
+                llvmir.replace(index, index + "不确定".length(), nextBlockLable);
+            }
+            if (isBreak) {
+                isBreak=false;
+                isElseBreak=false;
+                index = llvmir.lastIndexOf("不确跳出");
+                if (index != -1) {
+                    llvmir.replace(index, index + "不确跳出".length(), nextBlockLable);
+                }
+            }
+            regNum++;
+        }
+        else if (stmtNode.stmtType == StmtNode.StmtType.Continue) {
+            llvmir.append("br label 不确跳for2\n");
+            isContinue=true;
+            if (symbolTables.get(symbolTables.size() - 1).third == FuncSymbol.ReturnType.ELSE) {
+                isElseContinue=true;
+            }
+
+        }
+        else if (stmtNode.stmtType == StmtNode.StmtType.Break) {
+            llvmir.append("br label 不确跳出\n");
+            isBreak=true;
+            if (symbolTables.get(symbolTables.size() - 1).third == FuncSymbol.ReturnType.ELSE) {
+                isElseBreak=true;
+            }
+        }
+    }
+
+    private void visitForStmt(ForStmtNode forStmtNode) {
+//        ForStmt → LVal '=' Exp
+        visitExp(forStmtNode.expNode);
+        changeValueFromVar(forStmtNode.lValNode.ident.content, null);
+        int prevReg = regNum - 1;
+        llvmir.append("store i32 ").append("%" + prevReg + ", i32").append(getRegiNameFromVar(forStmtNode.lValNode.ident.content)).append("\n");
+        saveValue = null;
     }
 
     private void visitCond(CondNode condNode) {
@@ -974,15 +1131,7 @@ public class IRGenerator {
                     }
                 }
             }
-            if (isRelation) {
-                int tmpVarNum = getNextTmpVarNum(); // 获取下一个临时变量编号
-                llvmir.append("%").append(tmpVarNum).append(" = ")
-                        .append("zext i1 ")
-                        .append(leftValue).append(" to i32\n");
-                tmpValue = "%" + tmpVarNum;
-                leftValue="%" + tmpVarNum;
-                isRelation=false;
-            }
+
             int tmpVarNum ; // 获取下一个临时变量编号
             if (regHash.containsKey(leftValue)) {
                 //说明是i1,需要转换成i32

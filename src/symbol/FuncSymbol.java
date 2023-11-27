@@ -5,7 +5,10 @@ import java.util.List;
 public class FuncSymbol  extends Symbol { // 函数符号
     public static enum ReturnType {
         VOID,
-        INT
+        INT,
+        FOR,
+        IF,
+        ELSE,
     }
     public String name;
     public ReturnType type; // 函数返回类型，有VOID和INT两种情况
