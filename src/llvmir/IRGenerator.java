@@ -13,6 +13,8 @@ import token.TokenType;
 import utils.Triple;
 
 public class IRGenerator {
+    public Stack<Boolean> isInExpStack=new Stack<>();//用栈来标志, 防止递归的时候把isInExp改了
+    public Boolean isArray=false;
     public Boolean isReturn=false;
     public  Boolean isElseBreak=false;
     public Boolean isElseContinue=false;
@@ -64,13 +66,17 @@ public class IRGenerator {
             if (symbolTables.get(i).first.containsKey(ident)) {
                 Symbol symbol = symbolTables.get(i).first.get(ident);
                 if (symbol instanceof ArraySymbol) {
-                    return ((ArraySymbol) symbol).value;
+                    if (((ArraySymbol) symbol).dimension == 0) {
+                        return ((ArraySymbol) symbol).value;
+                    }
+
                 }
 
             }
         }
         return null;
     }
+    //TODO: 改一下这个函数, 适配从数组中取值
 
     public void changeValueFromVar(String ident, Integer newValue) {//值变了,寄存器也要变!
         for (int i = symbolTables.size() - 1; i >= 0; i--) {
@@ -91,6 +97,23 @@ public class IRGenerator {
                 Symbol symbol = symbolTables.get(i).first.get(ident);
                 if (symbol instanceof ArraySymbol) {
                     return ((ArraySymbol) symbol).regiName;
+                }
+
+            }
+        }
+        return null;
+    }
+    private String getValueFromVar(String ident, Integer x, Integer y) {
+        for (int i = symbolTables.size() - 1; i >= 0; i--) {
+            if (symbolTables.get(i).first.containsKey(ident)) {
+                Symbol symbol = symbolTables.get(i).first.get(ident);
+                if (symbol instanceof ArraySymbol) {
+                    if (y == null) {
+                        return String.valueOf(((ArraySymbol) symbol).value1d.get(x));
+                    }
+                    else{
+                        return String.valueOf(((ArraySymbol) symbol).value2d.get(x).get(y));
+                    }
                 }
 
             }
@@ -146,11 +169,11 @@ public class IRGenerator {
     // 计算方法
     public int calculate(String op, int a, int b) {
         return switch (op) {
-            case "+" -> a + b;
-            case "-" -> a - b;
-            case "*" -> a * b;
-            case "/" -> a / b;
-            case "%" -> a % b;
+            case "+", "add" -> a + b;
+            case "-","sub" -> a - b;
+            case "*","mul" -> a * b;
+            case "/","sdiv" -> a / b;
+            case "%","srem" -> a % b;
             default -> 0;
         };
     }
@@ -309,10 +332,29 @@ public class IRGenerator {
 
     private void visitFuncFParam(FuncFParamNode funcFParamNode) {
         //函数形参    FuncFParam → BType Ident ['[' ']' { '[' ConstExp ']' }]  //   b k
-        String name = funcFParamNode.ident.content;
-        llvmir.append("i32 %" + regNum + ", ");
-        put(name, new ArraySymbol(name, false, funcFParamNode.leftSqareBrack.size(), "%" + regNum, null));
-        regNum++;
+        //          FuncFParam   → BType Ident ['[' ']' { '[' ConstExp ']' }]
+        //TODO: 在这里加数组!
+        if (funcFParamNode.leftSqareBrack.size() == 0) {
+            String name = funcFParamNode.ident.content;
+            llvmir.append("i32 %" + regNum + ", ");
+            put(name, new ArraySymbol(name, false, funcFParamNode.leftSqareBrack.size(), "%" + regNum, (String) null));
+            regNum++;
+        }
+        else if(funcFParamNode.leftSqareBrack.size() == 1){
+            String name = funcFParamNode.ident.content;
+            llvmir.append("i32* %" + regNum + ", ");
+            put(name, new ArraySymbol(name, false, funcFParamNode.leftSqareBrack.size(), "%" + regNum, (String) null));
+            regNum++;
+        }
+        else if(funcFParamNode.leftSqareBrack.size() == 2){
+            isInExpStack.push(true);
+            visitConstExp(funcFParamNode.constExpNodes.get(0));
+            isInExpStack.pop();
+            String name = funcFParamNode.ident.content;
+            llvmir.append("["+saveValue+" x i32] *%" + regNum + ", ");
+            put(name, new ArraySymbol(name, false, funcFParamNode.leftSqareBrack.size(), "%" + regNum, (String) null));
+            regNum++;
+        }
     }
 
 
@@ -334,74 +376,226 @@ public class IRGenerator {
     }
 
     private void visitVarDef(VarDefNode varDefNode) {
-        //VarDef       → Ident | Ident '=' InitVal
-        String ident = varDefNode.identToken.content;
+//        VarDef → Ident { '[' ConstExp ']' } | Ident { '[' ConstExp ']' } '=' InitVal
+        if (varDefNode.constExpNodes.isEmpty()) {
+            String ident = varDefNode.identToken.content;
+            if (isGlobal) {
+                if (varDefNode.initValNode == null) {
+                    put(varDefNode.identToken.content,
+                            new ArraySymbol(varDefNode.identToken.content,
+                                    false, varDefNode.constExpNodes.size(),
+                                    "* @" + ident, "0")
+                    );
 
+                    llvmir.append("@").append(ident).append(" = dso_local global i32 ").append("0\n");
+                }
+                else {
 
-        if (isGlobal) {
+                    visitInitVal(varDefNode.initValNode);
+                    put(varDefNode.identToken.content,
+                            new ArraySymbol(varDefNode.identToken.content,
+                                    false, varDefNode.constExpNodes.size(),
+                                    "* @" + ident, saveValue.toString())
+                    );
 
-            if (varDefNode.initValNode == null) {
-                put(varDefNode.identToken.content,
-                        new ArraySymbol(varDefNode.identToken.content,
-                                false, varDefNode.constExpNodes.size(),
-                                "* @" + ident, "0")
-                );
-
-                llvmir.append("@").append(ident).append(" = dso_local global i32 ").append("0\n");
+                    llvmir.append("@").append(ident).append(" = dso_local global i32 ").append(saveValue).append("\n");
+                }
             }
             else {
 
-                visitInitVal(varDefNode.initValNode);
-                put(varDefNode.identToken.content,
-                        new ArraySymbol(varDefNode.identToken.content,
-                                false, varDefNode.constExpNodes.size(),
-                                "* @" + ident, saveValue.toString())
-                );
+                if (varDefNode.initValNode == null) {
+                    put(varDefNode.identToken.content,
+                            new ArraySymbol(varDefNode.identToken.content,
+                                    false, varDefNode.constExpNodes.size(),
+                                    "* %" + regNum, "0")
+                    );
 
-                llvmir.append("@").append(ident).append(" = dso_local global i32 ").append(saveValue).append("\n");
+                    llvmir.append("%").append(regNum).append(" = alloca i32\n");
+                    llvmir.append(findIndentation());
+                    llvmir.append("store i32 ").append(0).append(", i32* ").append("%").append(regNum++).append("\n");
+                }
+                else {
+                    visitInitVal(varDefNode.initValNode);
+                    put(varDefNode.identToken.content,
+                            new ArraySymbol(varDefNode.identToken.content,
+                                    false, varDefNode.constExpNodes.size(),
+                                    "* %" + regNum, (String) null)
+                    );
+                    llvmir.append(findIndentation());
+                    llvmir.append("%").append(regNum).append(" = alloca i32\n");
+                    llvmir.append(findIndentation());
+                    int prevReg = regNum - 1;
+                    llvmir.append("store i32 ").append("%" + prevReg).append(", i32* ").append("%").append(regNum++).append("\n");
+                }
             }
         }
-        else {
+        else{
+            isArray=true;
+            String ident = varDefNode.identToken.content;
+            if (isGlobal) {
+                if (varDefNode.initValNode == null) {
+                    List<Integer> shape = new ArrayList<>();
 
-            if (varDefNode.initValNode == null) {
-                put(varDefNode.identToken.content,
-                        new ArraySymbol(varDefNode.identToken.content,
-                                false, varDefNode.constExpNodes.size(),
-                                "* %" + regNum, "0")
-                );
+                    llvmir.append("@" + ident + " = dso_local global ");
+                    for (int i = 0; i < varDefNode.constExpNodes.size(); i++) {
+                        visitConstExp(varDefNode.constExpNodes.get(i));
+                        llvmir.append("[" + saveValue + " x ");
+                        shape.add(saveValue);
+                        saveValue = null;
+                    }
+                    for (int i = 0; i < varDefNode.constExpNodes.size(); i++) {
+                        if (i == 0) {
+                            llvmir.append("i32] ");
+                        }
+                        else {
+                            llvmir.append("] ");
+                        }
+                    }
+                    llvmir.append(" zeroinitializer\n");
+                }
+                else {
+                    //int c[5][5]={{1,2,3,0,0},{1,2,3,4,5},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}};
+                    //@c = dso_local global [5 x [5 x i32]] [[5 x i32] [i32 1, i32 2, i32 3, i32 0, i32 0], ...
+                    List<Integer> shape = new ArrayList<>();
 
-                llvmir.append("%").append(regNum).append(" = alloca i32\n");
-                llvmir.append(findIndentation());
-                llvmir.append("store i32 ").append(0).append(", i32* ").append("%").append(regNum++).append("\n");
+                    llvmir.append("@" + ident + " = dso_local global ");
+                    for (int i = 0; i < varDefNode.constExpNodes.size(); i++) {
+                        visitConstExp(varDefNode.constExpNodes.get(i));
+                        llvmir.append("[" + saveValue + " x ");
+                        shape.add(saveValue);
+                        saveValue = null;
+                    }
+                    for (int i = 0; i < varDefNode.constExpNodes.size(); i++) {
+                        if (i == 0) {
+                            llvmir.append("i32] ");
+                        }
+                        else {
+                            llvmir.append("] ");
+                        }
+                    }
+
+                    List<InitValNode> con = varDefNode.initValNode.initValNodes;
+                    if (shape.size() == 2) {
+                        List<List<Integer>> array = new ArrayList<>();//存数组内容
+                        for (InitValNode ccon : con) {
+                            List<Integer> rowi = new ArrayList<>();
+                            for (InitValNode cccon : ccon.initValNodes) {
+                                visitExp(cccon.expNode);
+                                rowi.add(saveValue);
+                                saveValue = null;
+                            }
+                            array.add(rowi);
+                        }
+                        String llvmCode = toLLVM2d(array);
+                        llvmir.append(llvmCode);
+                        llvmir.append("\n");
+                        put(varDefNode.identToken.content, new ArraySymbol(
+                                varDefNode.identToken.content, true,
+                                varDefNode.constExpNodes.size(), "* @" + ident, array
+                        ));
+                    }
+                    else if (shape.size() == 1) {
+                        List<Integer> array = new ArrayList<>();//存数组内容
+                        for (InitValNode ccon : con) {
+                            visitExp(ccon.expNode);
+                            array.add(saveValue);
+                            saveValue = null;
+                        }
+                        String llvmCode = toLLVM1d(array);
+                        llvmir.append(llvmCode);
+                        llvmir.append("\n");
+                        put(varDefNode.identToken.content, new ArraySymbol(
+                                varDefNode.identToken.content, true,
+                                varDefNode.constExpNodes.size(), "* @" + ident, array
+                        ));
+                    }
+                }
             }
             else {
+                //int c[2][3]={{1,2,3},{0,0,0}};
+                //int c[2][3]; 只分配空间, 不赋值
+                List<Integer> shape = new ArrayList<>();
 
-//                int flag=0,var=0;
-//                if(varDefNode.initValNode.expNode.addExpNode.mulExpNode.unaryExpNode.primaryExpNode.numberNode!=null){
-//                    flag=1;
-//                    var= Integer.parseInt(varDefNode.initValNode.expNode.addExpNode.mulExpNode.unaryExpNode.primaryExpNode.numberNode.getToken().content);
-//                }
-//                else{
-                visitInitVal(varDefNode.initValNode);
-//                }
-                put(varDefNode.identToken.content,
-                        new ArraySymbol(varDefNode.identToken.content,
-                                false, varDefNode.constExpNodes.size(),
-                                "* %" + regNum, null)
-                );
+                StringBuilder array_size = new StringBuilder();//记录形状, [2 x [3 x i32]]这种
+                for (int i = 0; i < varDefNode.constExpNodes.size(); i++) {
+                    visitConstExp(varDefNode.constExpNodes.get(i));
+                    array_size.append("[" + saveValue + " x ");
+                    shape.add(saveValue);
+                    saveValue = null;
+                }
+                int arrayRegNum=regNum;
+                llvmir.append("%" + regNum++ + " = alloca ");
 
-                llvmir.append(findIndentation());
-                llvmir.append("%").append(regNum).append(" = alloca i32\n");
-                llvmir.append(findIndentation());
-                int prevReg = regNum - 1;
-//                if (flag == 1) {
-//                    llvmir.append("store i32 ").append(var).append(", i32* ").append("%").append(regNum++).append("\n");
-//                } else {
-                llvmir.append("store i32 ").append("%" + prevReg).append(", i32* ").append("%").append(regNum++).append("\n");
-//                }
+                for (int i = 0; i < varDefNode.constExpNodes.size(); i++) {
+                    if (i == 0) {
+                        array_size.append("i32] ");
+                    }
+                    else {
+                        array_size.append("] ");
+                    }
+                }
+                llvmir.append(array_size);
+                llvmir.append("\n");
+                if (varDefNode.initValNode != null) {
+                    List<InitValNode> con = varDefNode.initValNode.initValNodes;
+                    if (shape.size() == 2) {
+                        List<List<Integer>> array = new ArrayList<>();//存数组内容
+                        for (InitValNode ccon : con) {
+                            List<Integer> rowi = new ArrayList<>();
+                            for (InitValNode cccon : ccon.initValNodes) {
+                                visitExp(cccon.expNode);
+                                rowi.add(saveValue);
+                                saveValue = null;
+                            }
+                            array.add(rowi);
+                        }
+                        int i=0,j=0;
+                        for (List<Integer> arrayRow : array) {
+                            j=0;
+                            for (Integer arrayElem : arrayRow) {
+                                llvmir.append("%" + regNum + " = getelementptr " + array_size +
+                                        ", " + array_size + "*%" + arrayRegNum +
+                                        ", i32 0, i32 " + i + ", i32 " + j + "\n");
+                                llvmir.append("store i32 " + arrayElem + ", i32* %" + regNum + "\n");
+                                regNum++;
+                                j++;
 
+                            }
+                            i++;
+                        }
+                        put(varDefNode.identToken.content, new ArraySymbol(
+                                varDefNode.identToken.content, true,
+                                varDefNode.constExpNodes.size(), "* %" + arrayRegNum, array
+                        ));
+                    }
+                    else if (shape.size() == 1) {
+                        List<Integer> array = new ArrayList<>();//存数组内容
+                        for (InitValNode ccon : con) {
+                            visitExp(ccon.expNode);
+                            array.add(saveValue);
+                            saveValue = null;
+                        }
+                        int i=0;
+                        for (Integer integer : array) {
+                            llvmir.append("%" + regNum + " = getelementptr " + array_size +
+                                    ", " + array_size + "*%" + arrayRegNum +
+                                    ", i32 0, i32 " + i  + "\n");
+                            llvmir.append("store i32 " + integer + ", i32* %" + regNum + "\n");
+                            regNum++;
+                            i++;
+                        }
+//
+                        llvmir.append("\n");
+                        put(varDefNode.identToken.content, new ArraySymbol(
+                                varDefNode.identToken.content, true,
+                                varDefNode.constExpNodes.size(), "* %" + arrayRegNum, array
+                        ));
+                    }
+                }
             }
         }
+        isArray=false;
+
     }
 
     private void visitInitVal(InitValNode initValNode) {
@@ -422,48 +616,249 @@ public class IRGenerator {
 
     private void visitConstDef(ConstDefNode constDef) {
         //ConstDef → Ident { '[' ConstExp ']' } '=' ConstInitVal
-        //ConstDef     → Ident  '=' ConstInitVal
-        String ident = constDef.identToken.content;
+        if (constDef.constExpNodes.size() == 0) {
+            //ConstDef     → Ident  '=' ConstInitVal
+            String ident = constDef.identToken.content;
 
-        //const int a=5;
-        //@a = dso_local constant i32 5
-        if (isGlobal) {
+            //const int a=5;
+            //@a = dso_local constant i32 5
+            if (isGlobal) {
 
-            visitConstInitVal(constDef.constInitValNode);
-            put(constDef.identToken.content, new ArraySymbol(
-                    constDef.identToken.content, true,
-                    constDef.constExpNodes.size(), "* @" + ident, saveValue.toString()
-            ));
+                visitConstInitVal(constDef.constInitValNode);
+                put(constDef.identToken.content, new ArraySymbol(
+                        constDef.identToken.content, true,
+                        constDef.constExpNodes.size(), "* @" + ident, saveValue.toString()
+                ));
 
 
-            llvmir.append("@").append(ident).append(" = dso_local constant i32 ").append(saveValue).append("\n");
+                llvmir.append("@").append(ident).append(" = dso_local constant i32 ").append(saveValue).append("\n");
+            }
+            else {
+
+                visitConstInitVal(constDef.constInitValNode);
+
+                put(constDef.identToken.content, new ArraySymbol(
+                        constDef.identToken.content, true,
+                        constDef.constExpNodes.size(), "* %" + regNum, (String) null
+                ));
+
+
+                llvmir.append(findIndentation());
+                llvmir.append("%").append(regNum).append(" = alloca i32\n");
+                llvmir.append(findIndentation());
+                int prevReg = regNum - 1;
+                llvmir.append("store i32 ").append("%" + prevReg).append(", i32* ").append("%").append(regNum++).append("\n");
+            }
         }
-        else {
+        else{
+            isArray=true;
+            String ident = constDef.identToken.content;
+            if (isGlobal) {
+                //int c[5][5]={{1,2,3,0,0},{1,2,3,4,5},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0}};
+                //@c = dso_local global [5 x [5 x i32]] [[5 x i32] [i32 1, i32 2, i32 3, i32 0, i32 0], ...
+                List<Integer> shape=new ArrayList<>();
 
-            visitConstInitVal(constDef.constInitValNode);
+                llvmir.append("@"+ident+" = dso_local constant ");
+                for (int i = 0; i < constDef.constExpNodes.size(); i++) {
+                    visitConstExp(constDef.constExpNodes.get(i));
+                    llvmir.append("[" + saveValue + " x ");
+                    shape.add(saveValue);
+                    saveValue=null;
+                }
+                for (int i = 0; i < constDef.constExpNodes.size(); i++){
+                    if (i == 0) {
+                        llvmir.append("i32] ");
+                    }
+                    else{
+                        llvmir.append("] ");
+                    }
+                }
 
-            put(constDef.identToken.content, new ArraySymbol(
-                    constDef.identToken.content, true,
-                    constDef.constExpNodes.size(), "* %" + regNum, null
-            ));
+                List<ConstInitValNode> con= constDef.constInitValNode.constInitValNodes;
+                if (shape.size() == 2) {
+                    List<List<Integer>> array=new ArrayList<>();//存数组内容
+                    for (ConstInitValNode ccon : con) {
+                        List<Integer> rowi = new ArrayList<>();
+                        for (ConstInitValNode cccon : ccon.constInitValNodes) {
+                            visitConstExp(cccon.constExpNode);
+                            rowi.add(saveValue);
+                            saveValue=null;
+                        }
+                        array.add(rowi);
+                    }
+                    String llvmCode=toLLVM2d(array);
+                    llvmir.append(llvmCode);
+                    llvmir.append("\n");
+                    put(constDef.identToken.content, new ArraySymbol(
+                            constDef.identToken.content, true,
+                            constDef.constExpNodes.size(), "* @" + ident, array
+                    ));
+                }
+                else if (shape.size() == 1) {
+                    List<Integer> array=new ArrayList<>();//存数组内容
+                    for (ConstInitValNode ccon : con) {
+                        visitConstExp(ccon.constExpNode);
+                        array.add(saveValue);
+                        saveValue=null;
+                    }
+                    String llvmCode = toLLVM1d(array);
+                    llvmir.append(llvmCode);
+                    llvmir.append("\n");
+                    put(constDef.identToken.content, new ArraySymbol(
+                            constDef.identToken.content, true,
+                            constDef.constExpNodes.size(), "* @" + ident, array
+                    ));
+                }
+            }
+            else {
+                //int c[2][3]={{1,2,3},{0,0,0}};
+                //int c[2][3]; 只分配空间, 不赋值
+                List<Integer> shape = new ArrayList<>();
+                int arrayRegNum=regNum;
 
+                StringBuilder array_size = new StringBuilder();//记录形状, [2 x [3 x i32]]这种
+                for (int i = 0; i < constDef.constExpNodes.size(); i++) {
+                    visitConstExp(constDef.constExpNodes.get(i));
+                    array_size.append("[" + saveValue + " x ");
+                    shape.add(saveValue);
+                    saveValue = null;
+                }
+                llvmir.append("%" + regNum++ + " = alloca ");
+                for (int i = 0; i < constDef.constExpNodes.size(); i++) {
+                    if (i == 0) {
+                        array_size.append("i32] ");
+                    }
+                    else {
+                        array_size.append("] ");
+                    }
+                }
+                llvmir.append(array_size);
+                llvmir.append("\n");
+                if (true) {
+                    List<ConstInitValNode> con = constDef.constInitValNode.constInitValNodes;
+                    if (shape.size() == 2) {
+                        List<List<Integer>> array = new ArrayList<>();//存数组内容
+                        for (ConstInitValNode ccon : con) {
+                            List<Integer> rowi = new ArrayList<>();
+                            for (ConstInitValNode cccon : ccon.constInitValNodes) {
+                                visitConstExp(cccon.constExpNode);
+                                rowi.add(saveValue);
+                                saveValue = null;
+                            }
+                            array.add(rowi);
+                        }
+                        int i=0,j=0;
+                        for (List<Integer> arrayRow : array) {
+                            j=0;
+                            for (Integer arrayElem : arrayRow) {
+                                llvmir.append("%" + regNum + " = getelementptr " + array_size +
+                                        ", " + array_size + "*%" + arrayRegNum +
+                                        ", i32 0, i32 " + i + ", i32 " + j + "\n");
+                                llvmir.append("store i32 " + arrayElem + ", i32* %" + regNum + "\n");
+                                regNum++;
+                                j++;
 
-            llvmir.append(findIndentation());
-            llvmir.append("%").append(regNum).append(" = alloca i32\n");
-            llvmir.append(findIndentation());
-            int prevReg = regNum - 1;
-            llvmir.append("store i32 ").append("%" + prevReg).append(", i32* ").append("%").append(regNum++).append("\n");
+                            }
+                            i++;
+                        }
+                        put(constDef.identToken.content, new ArraySymbol(
+                                constDef.identToken.content, true,
+                                constDef.constExpNodes.size(), "* %" + arrayRegNum, array
+                        ));
+                    }
+                    else if (shape.size() == 1) {
+                        List<Integer> array = new ArrayList<>();//存数组内容
+                        for (ConstInitValNode ccon : con) {
+                            visitConstExp(ccon.constExpNode);
+                            array.add(saveValue);
+                            saveValue = null;
+                        }
+                        int i=0;
+                        for (Integer integer : array) {
+                            llvmir.append("%" + regNum + " = getelementptr " + array_size +
+                                    ", " + array_size + "*%" + arrayRegNum +
+                                    ", i32 0, i32 " + i  + "\n");
+                            llvmir.append("store i32 " + integer + ", i32* %" + regNum + "\n");
+                            regNum++;
+                            i++;
+                        }
+                        llvmir.append("\n");
+                        put(constDef.identToken.content, new ArraySymbol(
+                                constDef.identToken.content, true,
+                                constDef.constExpNodes.size(), "* %" + arrayRegNum, array
+                        ));
+                    }
+                }
+            }
         }
+        isArray=false;
+    }
+    private String toLLVM1d(List<Integer> list) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i = 0; i < list.size(); i++) {
+            sb.append("i32 ").append(list.get(i));
+            if (i < list.size() - 1) {
+                sb.append(", ");
+            }
+        }
+        sb.append("]");
+        return sb.toString();
     }
 
+    private String toLLVM2d(List<List<Integer>> array) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        int columLenth = array.get(0).size();
+        for (List<Integer> row : array) {
+            // 检测是否为全零行
+            boolean isZeroRow = true;
+            for (int value : row) {
+                if (value != 0) {
+                    isZeroRow = false;
+                    break;
+                }
+            }
+
+            sb.append("["+columLenth+" x i32] ");
+            if (isZeroRow) {
+                sb.append("zeroinitializer");
+            } else {
+                sb.append("[");
+                for (int i = 0; i < row.size(); i++) {
+                    sb.append("i32 ").append(row.get(i));
+                    if (i < row.size() - 1) {
+                        sb.append(", ");
+                    }
+                }
+                sb.append("]");
+            }
+            sb.append(", ");
+        }
+
+        // 移除最后一个逗号和空格
+        sb.setLength(sb.length() - 2);
+        sb.append("]");
+        return sb.toString();
+    }
+
+
     private void visitConstInitVal(ConstInitValNode constInitValNode) {
+        //ConstInitVal → ConstExp | '{' [ ConstInitVal { ',' ConstInitVal } ] '}'
         //ConstInitVal → ConstExp
-        visitConstExp(constInitValNode.constExpNode);
+        if (constInitValNode.constExpNode != null) {
+            visitConstExp(constInitValNode.constExpNode);
+        }
+
     }
 
     private void visitConstExp(ConstExpNode constExpNode) {
         //ConstExp     → AddExp
         isConst = true;
+        saveOp = null;
+        saveValue = null;
+        tmpValue = null;
+        //TODO: constExp这里不用设置isInExp吧?
         visitAdd(constExpNode.addExpNode);
     }
 
@@ -562,14 +957,24 @@ public class IRGenerator {
             // 不要直接写, 先在这里调试一下, testfile.txt貌似就有问题!
             // 调试一下这个函数
             //}
-//            if (newValue != null) {
-//
-//            }
-            visitExp(stmtNode.expNode);
-            changeValueFromVar(stmtNode.lValNode.ident.content, null);
-            int prevReg = regNum - 1;
-            llvmir.append("store i32 ").append("%" + prevReg + ", i32").append(getRegiNameFromVar(stmtNode.lValNode.ident.content)).append("\n");
-            saveValue = null;
+            if (stmtNode.lValNode.expNodes.size() == 0) {
+                visitExp(stmtNode.expNode);
+                changeValueFromVar(stmtNode.lValNode.ident.content, null);
+                int prevReg = regNum - 1;
+                llvmir.append("store i32 ").append("%" + prevReg + ", i32").append(getRegiNameFromVar(stmtNode.lValNode.ident.content)).append("\n");
+                saveValue = null;
+            }
+            else {// 处理数组
+                //c[x+y][1]=y;
+                visitExp(stmtNode.expNode);
+                int exp_reg=regNum-1;
+                visitLval(stmtNode.lValNode);
+                int lval_reg=regNum-1;
+                llvmir.append("store i32 ").append("%" + exp_reg + ", i32").append("* %"+lval_reg).append("\n");
+                saveValue = null;
+
+            }
+
         }
         else if (stmtNode.stmtType == StmtNode.StmtType.Block) {
             visitBlock(stmtNode.blockNode);
@@ -706,7 +1111,6 @@ public class IRGenerator {
 
 
                 //开始else, else确定了,开始回填
-                //TODO: 回填应该是 从后往前找吧!
                 String huitian="%" + regNum;
                 int index = llvmir.lastIndexOf("跳else");
                 if (index != -1) {
@@ -848,7 +1252,7 @@ public class IRGenerator {
     }
 
     private void visitLOrExp(LOrExpNode lOrExpNode) {
-        //LOrExp → LAndExp | LAndExp '||'   LOrExp #TODO:注意这里顺序交换了
+        //LOrExp → LAndExp | LAndExp '||'   LOrExp #
 
         String leftValue = tmpValue;
         LOrExpNode current=lOrExpNode;
@@ -1263,13 +1667,17 @@ public class IRGenerator {
         saveOp = null;
         saveValue = null;
         tmpValue = null;
+        isInExp = true;
+        isInExpStack.push(true);
         visitAdd(expNode.addExpNode);
+        isInExpStack.pop();
+        isInExp = false;
     }
 
     private void visitAdd(AddExpNode addExpNode) {
         // AddExp -> MulExp | MulExp ('+' | '−') AddExp
-        isInExp = true;
-        if (isGlobal) {
+
+        if (isGlobal||isArray) {
             Integer value = saveValue;
             String op = saveOp;
             saveOp = null;
@@ -1372,7 +1780,7 @@ public class IRGenerator {
 //                        .append("\n");
             }
         }
-        isInExp = false;
+
     }
 
     // 辅助方法：获取下一个临时变量编号
@@ -1384,7 +1792,7 @@ public class IRGenerator {
 
     private void visitMulExp(MulExpNode mulExpNode) {
         //        MulExp     → UnaryExp |UnaryExp ('*' | '/' | '%') MulExp
-        if (isGlobal) {
+        if (isGlobal||isArray) {
             Integer value = saveValue;
             String op = saveOp;
             saveOp = null;
@@ -1505,7 +1913,7 @@ public class IRGenerator {
 
     private void visitUnaryExp(UnaryExpNode unaryExpNode) {
         // UnaryExp -> PrimaryExp | Ident '(' [FuncRParams] ')' | UnaryOp UnaryExp
-        if (isGlobal) {
+        if (isGlobal||isArray) {
             if (unaryExpNode.primaryExpNode != null) {
                 this.visitPrimaryExp(unaryExpNode.primaryExpNode);
             }
@@ -1625,12 +2033,12 @@ public class IRGenerator {
 
     private void visitPrimaryExp(PrimaryExpNode primaryExpNode) {
         //PrimaryExp → '(' Exp ')' | LVal | Number
-        if (isGlobal) {
+        if (isGlobal||isArray) {
             if (primaryExpNode.numberNode != null) {
                 saveValue = Integer.valueOf(primaryExpNode.numberNode.getToken().content);
             }
             else if (primaryExpNode.lValNode != null) {
-                saveValue = Integer.valueOf(this.getValueFromVar(primaryExpNode.lValNode.ident.content));
+                visitLval(primaryExpNode.lValNode);
             }
             else if (primaryExpNode.expNode != null) {
                 this.visitExp(primaryExpNode.expNode);
@@ -1662,18 +2070,108 @@ public class IRGenerator {
     }
 
     private void visitLval(LValNode lValNode) {
-        // 先暂时不考虑全局变量!
-//        llvmir.append("%").append(regNum).append(" = alloca i32\n");
-//        String value = getRegiNameFromVar(lValNode.ident.content);
-//        llvmir.append("store i32 "+);
-        tmpValue = getRegiNameFromVar(lValNode.ident.content);
-//        llvmir.append("%").append(regNum).append(" = add i32 0, ").append("")
-        if (isInExp) {
-            llvmir.append("%").append(regNum).append(" = load i32, i32").append(tmpValue).append("\n");
-            tmpValue = "%" + String.valueOf(regNum);
-            regNum++;
+        // LVal '=' Exp ';'这个文法并没有调用该函数.
+        // 该函数主要处理表达式里的Lval
+        //LVal → Ident {'[' Exp ']'} '
+        if (lValNode.expNodes.isEmpty()) {
+            if (isGlobal||isArray) {
+                saveValue = Integer.valueOf(this.getValueFromVar(lValNode.ident.content));
+            }
+            else {
+                tmpValue = getRegiNameFromVar(lValNode.ident.content);
+                if (!isInExpStack.empty()) {
+                    llvmir.append("%").append(regNum).append(" = load i32, i32").append(tmpValue).append("\n");
+                    tmpValue = "%" + String.valueOf(regNum);
+                    regNum++;
+                }
+            }
+
+        }
+        else {
+            if (isGlobal) {
+                Integer x = null, y = null;
+                if (lValNode.expNodes.size() >= 1) {
+                    visitExp(lValNode.expNodes.get(0));
+                    x = saveValue;
+                }
+                if (lValNode.expNodes.size() >= 2) {
+                    visitExp(lValNode.expNodes.get(1));
+                    y = saveValue;
+                }
+                saveValue = Integer.valueOf(getValueFromVar(lValNode.ident.content, x, y));
+            }
+            else {
+                String x=null,y=null;
+//                    int x=1,y=1;
+//                    int p=c[x][y];
+                //  %9 = getelementptr inbounds ...* %2, i32 0, i32 %8, i32 %9; like this, 其实也好搞
+                if (lValNode.expNodes.size() >= 1) {
+                    visitExp(lValNode.expNodes.get(0));
+                    int prev_reg=regNum-1;
+                    x="%"+prev_reg;
+                }
+                if (lValNode.expNodes.size() >= 2) {
+                    visitExp(lValNode.expNodes.get(1));
+                    int prev_reg=regNum-1;
+                    y="%"+prev_reg;
+                }
+                if (y == null) {
+                    //1d
+                    List<Integer> array=new ArrayList<>();
+                    ArraySymbol arraySymbol = null;
+                    for (int i = symbolTables.size() - 1; i >= 0; i--) {
+                        if (symbolTables.get(i).first.containsKey(lValNode.ident.content)) {
+                            Symbol symbol=symbolTables.get(i).first.get(lValNode.ident.content);
+                            if (symbol instanceof ArraySymbol) {
+                                if (((ArraySymbol) symbol).dimension == 1) {
+                                    array=((ArraySymbol) symbol).value1d;
+                                    arraySymbol=(ArraySymbol)symbol;
+                                }
+                            }
+                        }
+                    }
+                    String array_size = "[" + array.size() + " x i32]";
+                    llvmir.append("%" + regNum + " = getelementptr "
+                            + array_size + ", " + array_size + arraySymbol.regiName + ", i32 0, i32 " + x +  "\n");
+                    int prev_reg=regNum;
+                    regNum++;
+                    if (!isInExpStack.empty()) {
+                        llvmir.append("%").append(regNum).append(" = load i32, i32* %").append(prev_reg).append("\n");
+                        tmpValue = "%" + String.valueOf(regNum);
+                        regNum++;
+                    }
+                }
+                else {//2d
+                    //%3 = getelementptr [5 x [7 x i32]], [5 x [7 x i32]]* @a, i32 0, i32 3, i32 4
+                    List<List<Integer>> array=new ArrayList<>();
+                    ArraySymbol arraySymbol = null;
+                    for (int i = symbolTables.size() - 1; i >= 0; i--) {
+                        if (symbolTables.get(i).first.containsKey(lValNode.ident.content)) {
+                            Symbol symbol=symbolTables.get(i).first.get(lValNode.ident.content);
+                            if (symbol instanceof ArraySymbol) {
+                                if (((ArraySymbol) symbol).dimension == 2) {
+                                    array=((ArraySymbol) symbol).value2d;
+                                    arraySymbol=(ArraySymbol)symbol;
+                                }
+                            }
+                        }
+                    }
+                    String array_size = "[" + array.size() + " x [" + array.get(0).size() + " x i32]]";
+                    llvmir.append("%" + regNum + " = getelementptr "
+                            + array_size + ", " + array_size + arraySymbol.regiName + ", i32 0, i32 " + x + ", i32 " + y + "\n");
+                    int prev_reg=regNum;
+                    regNum++;
+                    if (!isInExpStack.empty()) {
+                        llvmir.append("%").append(regNum).append(" = load i32, i32* %").append(prev_reg).append("\n");
+                        tmpValue = "%" + String.valueOf(regNum);
+                        regNum++;
+                    }
+                }
+            }
         }
     }
+
+
 
 
     public String toString() {
