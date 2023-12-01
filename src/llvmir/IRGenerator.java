@@ -429,6 +429,7 @@ public class IRGenerator {
 
         isInFunc = false;
         removeSymbolTable();
+
     }
 
     private void visitfuncFParams(FuncFParamsNode funcFParamsNode) {
@@ -1092,12 +1093,12 @@ public class IRGenerator {
             tmpValue = null;
             llvmir.append(findIndentation());
 
-            if ((isContinue&&checkIfInIf())
-                    ||(isElseContinue&&checkIfInElse())) {
+            if ((symbolTables.get(symbolTables.size()-1).first.containsKey("if_continue")&&checkIfInIf())
+                    ||(symbolTables.get(symbolTables.size()-1).first.containsKey("else_continue")&&checkIfInElse())) {
                 return;
             }
-            if ((isBreak&&checkIfInIf())
-                    ||(isElseBreak&&checkIfInElse())) {
+            if ((symbolTables.get(symbolTables.size()-1).first.containsKey("if_break")&&checkIfInIf())
+                    ||(symbolTables.get(symbolTables.size()-1).first.containsKey("else_break")&&checkIfInElse())) {
                 return;
             }
             visitBlockItem(blockItemNode);
@@ -1143,6 +1144,9 @@ public class IRGenerator {
         }
         else {
             visitStmt(blockItemNode.stmtNode);
+        }
+        if (!localArrayInFunc.empty()) {
+            localArrayInFunc.clear();
         }
 
     }
@@ -1225,42 +1229,12 @@ public class IRGenerator {
                         saveValue = null;
                     }
                     else {
-                        if (stmtNode.lValNode.expNodes.size() == 1) {
-                            visitExp(stmtNode.lValNode.expNodes.get(0));
-                            int exp_reg = regNum - 1;
-                            llvmir.append("%" + regNum + " = load i32*, i32" + arraySymbol.regiName + "\n");
-                            int prev_reg=regNum;
-                            regNum++;
-                            llvmir.append("%" + regNum +" = getelementptr i32, i32* %"+prev_reg+", i32 %"+exp_reg+"\n");
-                            prev_reg=regNum;
-                            regNum++;
-                            visitExp(stmtNode.expNode);
-                            exp_reg=regNum-1;
-                            llvmir.append("store i32 %" + exp_reg + ", i32* %" + prev_reg + "\n");
-                        }
-                        else if (stmtNode.lValNode.expNodes.size() == 2) {
-//                        %7 = load [2 x i32]*, [2 x i32]** %5, align 8
-//                        %8 = getelementptr inbounds [2 x i32], [2 x i32]* %7, i64 0
-//                        %9 = getelementptr inbounds [2 x i32], [2 x i32]* %8, i64 0, i64 0
-                            visitExp(stmtNode.lValNode.expNodes.get(0));
-                            int exp_reg = regNum - 1;
-                            visitExp(stmtNode.lValNode.expNodes.get(1));
-                            int exp_reg2 = regNum - 1;
-                            String size=doRegex(arraySymbol.regiName);
-                            llvmir.append("%" + regNum + " = load " + size + "*, " + arraySymbol.regiName + "\n");
-                            int prev_reg=regNum;
-                            regNum++;
-                            llvmir.append("%" + regNum + " = getelementptr "+size +", "+size+"* %"+prev_reg+", i32 %"+exp_reg+"\n");
-                            prev_reg=regNum;
-                            regNum++;
-                            llvmir.append("%" + regNum + " = getelementptr "+size +", "+size+"* %"+prev_reg+", i32 0, i32 %"+exp_reg2+"\n");
-                            prev_reg=regNum;
-                            regNum++;
-                            visitExp(stmtNode.expNode);
-                            exp_reg=regNum-1;
-                            llvmir.append("store i32 %" + exp_reg + ", i32* %" + prev_reg + "\n");
-
-                        }
+                        visitExp(stmtNode.expNode);
+                        int exp_reg = regNum - 1;
+                        visitLval(stmtNode.lValNode);
+                        int lval_reg = regNum - 1;
+                        llvmir.append("store i32 ").append("%" + exp_reg + ", i32").append("* %" + lval_reg).append("\n");
+                        saveValue = null;
                     }
 
 
@@ -1309,7 +1283,7 @@ public class IRGenerator {
                     j--;
                 }
             }
-            if (!args2.isEmpty()) {
+            while (!args2.isEmpty()) {
                 int num = regNum - j;
                 llvmir.append("call void @putint(i32 ").append(args2.get(0)).append(")\n");
                 llvmir.append(findIndentation());
@@ -1343,16 +1317,16 @@ public class IRGenerator {
                 addSymbolTable(false, FuncSymbol.ReturnType.IF);
                 visitStmt(stmtNode.stmtNodes.get(0));
 
-                if (symbolTables.get(symbolTables.size()-1).first.containsKey("return")) {
+                if (ifContains("return")) {
                     isReturn=false;
 //                    llvmir.append("\n\n" + regNum + ":\n");
                 }
                 else{
-                    if (symbolTables.get(symbolTables.size()-1).first.containsKey("break")) {
+                    if (ifContains("break")) {
 //                        llvmir.append("\n\n" + regNum + ":\n");
                     }
                     else{
-                        if (symbolTables.get(symbolTables.size()-1).first.containsKey("continue")) {
+                        if (ifContains("continue")) {
 //                            llvmir.append("\n\n" + regNum + ":\n");
                         }
                         else{
@@ -1388,16 +1362,16 @@ public class IRGenerator {
                 visitStmt(stmtNode.stmtNodes.get(0));
                 int flag=0;
                 // if结束,跳出ifStmt!
-                if (symbolTables.get(symbolTables.size()-1).first.containsKey("return")) {
+                if (ifContains("return")) {
                     isReturn=false;
 //                    llvmir.append("\n\n" + regNum + ":\n");
                 }
                 else{
-                    if (symbolTables.get(symbolTables.size()-1).first.containsKey("break")) {
+                    if (ifContains("break")) {
 //                        llvmir.append("\n\n" + regNum + ":\n");
                     }
                     else{
-                        if (symbolTables.get(symbolTables.size()-1).first.containsKey("continue")) {
+                        if (ifContains("continue")) {
 //                            llvmir.append("\n\n" + regNum + ":\n");
                         }
                         else{
@@ -1421,16 +1395,16 @@ public class IRGenerator {
                 visitStmt(stmtNode.stmtNodes.get(1));
 
                 //else结束!
-                if (symbolTables.get(symbolTables.size()-1).first.containsKey("return")) {
+                if (ifContains("return")) {
                     isReturn=false;
 //                    llvmir.append("\n\n" + regNum + ":\n");
                 }
                 else{
-                    if (symbolTables.get(symbolTables.size()-1).first.containsKey("break")) {
+                    if (ifContains("break")) {
 //                        llvmir.append("\n\n" + regNum + ":\n");
                     }
                     else{
-                        if (symbolTables.get(symbolTables.size()-1).first.containsKey("continue")) {
+                        if (ifContains("continue")) {
 //                            llvmir.append("\n\n" + regNum + ":\n");
                         }
                         else{
@@ -1485,7 +1459,7 @@ public class IRGenerator {
             visitStmt(stmtNode.stmtNode);
 
 
-            int prev=regNum-1;
+            int prev=regNum;
             String for2Lable="%"+prev;
 //            if (isContinue) {
 //                isContinue=false;
@@ -1495,15 +1469,15 @@ public class IRGenerator {
 //                    llvmir.replace(index, index + "不确跳for2".length(), for2Lable);
 //                }
 //            }
-            if (symbolTables.get(symbolTables.size()-1).first.containsKey("break")||
-                    symbolTables.get(symbolTables.size()-1).first.containsKey("continue")||
-                    symbolTables.get(symbolTables.size()-1).first.containsKey("return")) {
-
-            }
-            else {
+//            if (ifContains("break")||
+//                    ifContains("continue")||
+//                    ifContains("return")) {
+//
+//            }
+//            else {
                 llvmir.append("br label " + "%" + regNum + "\n\n" + regNum + ":\n");
                 regNum++;
-            }
+//            }
             removeSymbolTable();
             if (stmtNode.forStmtNodes.get(1) != null) {
                 visitForStmt(stmtNode.forStmtNodes.get(1));
@@ -1548,11 +1522,15 @@ public class IRGenerator {
         }
 
         else if (stmtNode.stmtType == StmtNode.StmtType.Continue) {
+
             putToFor("continue", new Symbol());
             llvmir.append("br label 不确跳for2\n\n" + regNum++ + ":\n");
             //isContinue=true;
             if (symbolTables.get(symbolTables.size() - 1).third == FuncSymbol.ReturnType.ELSE) {
-                isElseContinue=true;
+                put("else_continue", new Symbol());
+            }
+            else {
+                put("if_continue", new Symbol());
             }
 
         }
@@ -1561,11 +1539,16 @@ public class IRGenerator {
             llvmir.append("br label 不确跳出\n\n" + regNum++ + ":\n");
             //isBreak=true;
             if (symbolTables.get(symbolTables.size() - 1).third == FuncSymbol.ReturnType.ELSE) {
-                isElseBreak=true;
+                put("else_break", new Symbol());
+            }
+            else {
+                put("if_break", new Symbol());
             }
         }
 
     }
+
+
 
     private void putToFor(String aBreak, Symbol symbol) {//将break这些加到直接外层的for的符号表里面
         for (int i = symbolTables.size() - 1; i >= 0; i--) {
@@ -1574,6 +1557,18 @@ public class IRGenerator {
                 return;
             }
         }
+    }
+    private Boolean ifContains(String aReturn) {
+        for (int i = symbolTables.size() - 1; i >= 0; i--) {
+            if (symbolTables.get(i).third == FuncSymbol.ReturnType.FOR) {
+                if (symbolTables.get(i).first.containsKey(aReturn)) {
+                    return true;
+                }
+                return false;
+            }
+
+        }
+        return false;
     }
 
     private boolean checkLastLineIsBr() {
@@ -2357,6 +2352,7 @@ public class IRGenerator {
                 }
                 if (funcSymbol.funcParams.size() != 0) {
                     if (unaryExpNode.funcRParamsNode != null) {
+                        //TODO: 调试一下这个断点!!!!!
                         visitfuncRParams(unaryExpNode.funcRParamsNode);
                     }
 
@@ -2473,7 +2469,6 @@ public class IRGenerator {
 
     private void visitLval(LValNode lValNode) {
         //主要处理函数实参, 看看函数中呢,一样吗
-        // LVal '=' Exp ';'这个文法并没有调用该函数.
         // 该函数主要处理表达式里的Lval
         //LVal → Ident {'[' Exp ']'} '
         if (isInFunc) {
@@ -2481,6 +2476,14 @@ public class IRGenerator {
             ArraySymbol arraySymbol = getArraySymbolFromFunc(lValNode.ident.content);
             if (arraySymbol == null) {
                 isNotInFuncStack.push(true);
+            }
+            else {
+                if (arraySymbol.regiName.charAt(0) != '['&&arraySymbol.value2d!=null) {//TODO:一维数组怎么判断??
+                    localArrayInFunc.push(true);
+                }
+                if (arraySymbol.regiName.charAt(2) != '*' && arraySymbol.value1d!=null) {
+                    localArrayInFunc.push(true);
+                }
             }
         }
 
@@ -2501,7 +2504,8 @@ public class IRGenerator {
 
         }
         else {
-            if (!isInFunc||!isNotInFuncStack.empty()) {
+            if (!isInFunc||!isNotInFuncStack.empty()||!localArrayInFunc.empty()) {
+
                 if (arraySymboll.dimension == 1 && lValNode.expNodes.size() == 1 ||
                         arraySymboll.dimension == 2 && lValNode.expNodes.size() == 2) {//0维度
                     if (isGlobal) {
@@ -2627,7 +2631,7 @@ public class IRGenerator {
                 }
             }
             else {
-               // 处理函数中的数组情况
+               // 处理函数中的数组参数!!!
                 if (arraySymboll.dimension == 1 && lValNode.expNodes.size() == 1 ||
                         arraySymboll.dimension == 2 && lValNode.expNodes.size() == 2) {
                     if (arraySymboll.dimension == 1 && lValNode.expNodes.size() == 1) {
@@ -2643,8 +2647,8 @@ public class IRGenerator {
                         llvmir.append("%" + regNum + " = getelementptr i32, i32* %" + arr_reg + ", i32 " + x + "\n");
                         int this_prev_reg = regNum;
                         regNum++;
-                        llvmir.append("%" + regNum + " = load i32, i32* %" + this_prev_reg + "\n");// 这样就获取到值了
-                        regNum++;
+//                        llvmir.append("%" + regNum + " = load i32, i32* %" + this_prev_reg + "\n");// 这样就获取到值了
+//                        regNum++;
 
                         if (!isInExpStack.empty()) {
                             llvmir.append("%").append(regNum).append(" = load i32, i32* %").append(this_prev_reg).append("\n");
@@ -2682,11 +2686,73 @@ public class IRGenerator {
                         }
                     }
                 }
+                else { // 这里面的都不可能是复杂表达式, 一定只有一个字母!
+                    if (arraySymboll.dimension == 1) {//一维参数// int x[3];// func(x)
+                        ArraySymbol arraySymbol = getArraySymbol(lValNode.ident.content);
+                        llvmir.append("%" + regNum +" = load i32*, i32"+arraySymbol.regiName+ "\n");
+                        regNum++;
+
+                    }
+                    else if (arraySymboll.dimension == 2) {
+                        ArraySymbol arraySymbol = getArraySymbol(lValNode.ident.content);
+                        List<List<Integer>> array = arraySymbol.value2d;
+//                        String array_size1d = "[" + array.get(0).size() + " x i32]";
+//                        String array_size2d = "[" + array.size() + " x [" + array.get(0).size() + " x i32]]";
+                        if (lValNode.expNodes.size() == 1) {//一维参数
+    //                           %3 = load [3 x i32]*, [3 x i32]** %2, align 8
+                            //  %4 = getelementptr inbounds [3 x i32], [3 x i32]* %3, i64 2
+                            //  %5 = getelementptr inbounds [3 x i32], [3 x i32]* %4, i64 0, i64 0
+                            visitExp(lValNode.expNodes.get(0));
+                            int exp_reg=regNum-1;
+                            StringBuilder symbol = new StringBuilder();
+                            for (int i = 0; i < arraySymbol.regiName.length(); i++) {
+                                if (arraySymbol.regiName.charAt(i) == '*') {
+                                    break;
+                                }
+                                symbol.append(arraySymbol.regiName.charAt(i));
+
+                            }
+
+                            llvmir.append("%" + regNum + " = load " + symbol + "*, " + arraySymbol.regiName + "\n");
+                            int prev=regNum;
+                            regNum++;
+
+                            llvmir.append("%" + regNum + " = getelementptr " + symbol + ", " + symbol + "* %" + prev +
+                                    ", i32 %" + exp_reg + "\n");
+                            prev=regNum;
+                            regNum++;
+
+                            llvmir.append("%" + regNum + " = getelementptr " + symbol + ", " + symbol + "* %" + prev +
+                                    ", i32 0, i32 0"  + "\n");
+                            regNum++;
+
+                        }
+                        else if (lValNode.expNodes.size() == 0) {//二维参数
+                            // %6 = load [3 x i32]*, [3 x i32]** %2
+//                            llvmir.append("%" + regNum + " = getelementptr "
+//                                    + array_size2d + ", " + array_size2d + arraySymbol.regiName + ", i32 0, i32 0" + "\n");
+                            StringBuilder symbol = new StringBuilder();
+                            for (int i = 0; i < arraySymbol.regiName.length(); i++) {
+                                symbol.append(arraySymbol.regiName.charAt(i));
+                                if (arraySymbol.regiName.charAt(i) == '*') {
+                                    break;
+                                }
+                            }
+                            llvmir.append("%" + regNum + " = load " + symbol + ", " + arraySymbol.regiName + "\n");
+
+                            regNum++;
+
+                        }
+                    }
+                }
             }
 
         }
         if (!isNotInFuncStack.empty()) {
             isNotInFuncStack.pop();
+        }
+        if (!localArrayInFunc.empty()) {
+            localArrayInFunc.pop();
         }
 
     }
